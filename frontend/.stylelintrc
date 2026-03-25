@@ -1,0 +1,18 @@
+{
+  "extends": [
+    "stylelint-config-standard",
+    "stylelint-config-standard-vue",
+    "stylelint-config-tailwindcss"
+  ],
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": ["apply", "theme", "utility", "variant", "plugin", "source", "tailwind"]
+      }
+    ],
+    "at-rule-no-deprecated": null,
+    "import-notation": null
+  },
+  "ignoreFiles": ["**/theme.css/**"]
+}
