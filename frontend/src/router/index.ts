@@ -1,15 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '../views/HomeView.vue';
-import AboutView from '../views/AboutView.vue';
-
-const routes = [
-  { path: '/', name: 'home', component: HomeView },
-  { path: '/about', name: 'about', component: AboutView },
-];
+import MainLayout from '@/layouts/MainLayout.vue';
+import AuthenticationLayout from '@/layouts/AuthenticationLayout.vue';
+import { mainLayoutRoutes } from './routes/mainLayout';
+import { authLayoutRoutes } from './routes/authLayout';
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes,
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes: [
+    {
+      path: '/',
+      component: MainLayout,
+      children: mainLayoutRoutes,
+    },
+    {
+      path: '/',
+      component: AuthenticationLayout,
+      children: authLayoutRoutes,
+    },
+  ],
 });
 
 export default router;
