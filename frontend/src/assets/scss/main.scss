@@ -1,0 +1,8 @@
+// 1. Custom variables (override Bootstrap defaults)
+@import "variables";
+
+// 2. Bootstrap
+@import "bootstrap/scss/bootstrap";
+
+// 3. Custom overrides (after Bootstrap so they take precedence)
+@import "overrides";
