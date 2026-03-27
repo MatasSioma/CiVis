@@ -1,6 +1,6 @@
 # CiVis
 
-Django REST API + Vue.js + PostgreSQL (pgvector) — fully dockerized.
+Django REST API + Vue.js (TypeScript) + PostgreSQL (pgvector) — fully dockerized.
 
 ## Prerequisites
 
@@ -19,38 +19,93 @@ docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
 ```
 
-| Service  | URL                         |
-|----------|-----------------------------|
-| Frontend | http://localhost:5173       |
-| API      | http://localhost:8000/api/  |
+| Service  | URL                          |
+| -------- | ---------------------------- |
+| Frontend | http://localhost:5173        |
+| API      | http://localhost:8000/api/   |
 | Admin    | http://localhost:8000/admin/ |
 
 ## Project Structure
 
 ```
 ├── docker-compose.yml
-├── backend/                  # Django REST API
+├── .github/workflows/       # CI pipeline
+├── backend/                 # Django REST API
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── ruff.toml            # Ruff linter & formatter config
 │   ├── manage.py
-│   ├── config/               # Django project settings, urls, wsgi/asgi
-│   └── api/                  # App: models, serializers, views, urls
+│   ├── config/              # Django project settings, urls, wsgi/asgi
+│   └── api/                 # App: models, serializers, views, urls
 │       └── migrations/
-└── frontend/                 # Vue.js SPA
+└── frontend/                # Vue.js SPA
     ├── Dockerfile
     ├── package.json
-    ├── vite.config.js
+    ├── vite.config.ts
+    ├── tsconfig.json         # TypeScript config (references app + node)
+    ├── eslint.config.ts      # ESLint config
+    ├── .prettierrc           # Prettier config
+    ├── .stylelintrc          # Stylelint config
     ├── index.html
     └── src/
-        ├── main.js
+        ├── main.ts
         ├── App.vue
         ├── router/           # Vue Router config
+        │   ├── index.ts
+        │   ├── enums/        # Route name & path enums
+        │   └── routes/       # Route definitions per layout
+        ├── layouts/          # Layout components (MainLayout, AuthLayout, etc.)
         ├── views/            # Page-level components
-        └── assets/scss/      # Bootstrap SCSS customization
-            ├── main.scss         # Entry point — imports everything
-            ├── _variables.scss   # Override Bootstrap variables BEFORE import
-            └── _overrides.scss   # Custom styles AFTER Bootstrap
+        ├── shared/types/     # Shared TypeScript types
+        └── assets/css/       # Tailwind CSS
+            ├── index.css     # Main entry point
+            └── theme.css     # Tailwind theme customization
 ```
+
+---
+
+## VSCode Setup — Format & Lint on Save
+
+Install these VSCode extensions:
+
+- **ESLint** (`dbaeumer.vscode-eslint`)
+- **Prettier** (`esbenp.prettier-vscode`)
+- **Stylelint** (`stylelint.vscode-stylelint`)
+- **Ruff** (`charliermarsh.ruff`)
+
+Then open **Settings JSON** via `Ctrl+Shift+P` → `Preferences: Open Settings (JSON)` and add:
+
+```jsonc
+{
+  // ── Frontend (Vue / TypeScript / CSS) ──────────────────────
+  "[vue]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+  },
+
+  // ── Backend (Python) ───────────────────────────────────────
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+  },
+}
+```
+
+Now pressing `Ctrl+S` will automatically format and lint-fix the current file.
+
+---
 
 ## Development Workflow
 
@@ -74,6 +129,21 @@ docker compose up --build backend
 
 Django auto-reloads on file changes — the `backend/` directory is mounted into the container.
 
+#### Linting & Formatting (Ruff)
+
+Config lives in `backend/ruff.toml`. Run manually:
+
+```bash
+# Check for lint errors
+ruff check .
+
+# Auto-fix lint errors
+ruff check . --fix
+
+# Format code
+ruff format .
+```
+
 ### Frontend
 
 The Vite dev server hot-reloads on save. The `frontend/` directory is mounted into the container.
@@ -86,15 +156,32 @@ docker compose exec frontend npm install <package-name>
 docker compose exec frontend npm run <script>
 ```
 
-API requests from the frontend are proxied: any fetch to `/api/...` is forwarded to the backend container automatically (configured in `vite.config.js`).
+API requests from the frontend are proxied: any fetch to `/api/...` is forwarded to the backend container automatically (configured in `vite.config.ts`).
 
-### Customizing Bootstrap
+#### Linting & Formatting
 
-Edit the SCSS files in `frontend/src/assets/scss/`:
+Config files: `eslint.config.ts`, `.prettierrc`, `.stylelintrc`. Run manually:
 
-1. **`_variables.scss`** — Override Bootstrap variables (colors, fonts, spacing, etc.) *before* Bootstrap is imported. See all available variables in `node_modules/bootstrap/scss/_variables.scss`.
-2. **`_overrides.scss`** — Write custom CSS rules that apply *after* Bootstrap, so they take precedence.
-3. **`main.scss`** — The entry point that wires it all together. Normally you don't need to edit this.
+```bash
+# Format with Prettier
+npm run format
+
+# Lint with ESLint (auto-fix)
+npm run lint
+
+# Lint CSS/Vue styles with Stylelint (auto-fix)
+npm run lint:style
+
+# Type-check
+npm run typecheck
+```
+
+### Customizing Tailwind CSS
+
+Edit the CSS files in `frontend/src/assets/css/`:
+
+1. **`theme.css`** — Customize the Tailwind theme (colors, fonts, spacing, etc.).
+2. **`index.css`** — The main entry point that imports Tailwind and your theme.
 
 ### Database
 
@@ -122,41 +209,29 @@ docker compose down -v
 
 ## Vue Router
 
-Vue Router maps URL paths to Vue components. The config lives in `frontend/src/router/index.js`:
+Vue Router maps URL paths to Vue components. The config lives in `frontend/src/router/index.ts`.
 
-```js
-import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "../views/HomeView.vue";
-
-const routes = [
-  { path: "/", name: "home", component: HomeView },
-  { path: "/about", name: "about", component: AboutView },
-];
-
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-});
-
-export default router;
-```
+Routes are organized by layout in `frontend/src/router/routes/` and use enums for route names and paths defined in `frontend/src/router/enums/`.
 
 **Adding a new page:**
 
 1. Create a `.vue` file in `frontend/src/views/` (e.g. `SettingsView.vue`).
-2. Add a route entry in `router/index.js`:
-   ```js
-   import SettingsView from "../views/SettingsView.vue";
-
-   // add to the routes array:
-   { path: "/settings", name: "settings", component: SettingsView }
+2. Add route name and path to the enums in `router/enums/`.
+3. Add a route entry in the appropriate layout file under `router/routes/`:
+   ```ts
+   {
+     path: RoutePaths.SETTINGS,
+     name: RouteNames.SETTINGS,
+     component: () => import('@/views/SettingsView.vue'),
+   }
    ```
-3. Optionally add a `<router-link to="/settings">` in `App.vue` for navigation.
+4. Optionally add a `<RouterLink :to="{ name: RouteNames.SETTINGS }">` for navigation.
 
 **Key concepts:**
 
-- `<router-view />` in `App.vue` renders the matched component.
-- `<router-link to="/path">` creates client-side navigation links (no page reload).
+- `<RouterView />` in `App.vue` renders the matched component.
+- `<RouterLink to="/path">` creates client-side navigation links (no page reload).
+- **Layouts** (`src/layouts/`) wrap groups of routes (e.g. main nav vs. auth pages).
 - **Views** (`src/views/`) are page-level components tied to routes.
 - **Components** (`src/components/`) are reusable pieces used inside views.
 - Route params: `{ path: "/docs/:id", component: DocDetail }` — access via `useRoute().params.id`.
@@ -198,8 +273,8 @@ from .models import Project
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ["id", "name", "description", "created_at"]
-        read_only_fields = ["created_at"]
+        fields = ['id', 'name', 'description', 'created_at']
+        read_only_fields = ['created_at']
 ```
 
 The serializer converts model instances to/from JSON and handles validation.
@@ -214,7 +289,7 @@ from .models import Project
 from .serializers import ProjectSerializer
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all().order_by("-created_at")
+    queryset = Project.objects.all().order_by('-created_at')
     serializer_class = ProjectSerializer
 ```
 
@@ -229,19 +304,19 @@ from rest_framework.routers import DefaultRouter
 from .views import ProjectViewSet
 
 router = DefaultRouter()
-router.register(r"projects", ProjectViewSet)
+router.register(r'projects', ProjectViewSet)
 ```
 
 This generates the following endpoints automatically:
 
-| Method | URL                    | Action          |
-|--------|------------------------|-----------------|
-| GET    | `/api/projects/`       | List all        |
-| POST   | `/api/projects/`       | Create          |
-| GET    | `/api/projects/:id/`   | Retrieve one    |
-| PUT    | `/api/projects/:id/`   | Full update     |
-| PATCH  | `/api/projects/:id/`   | Partial update  |
-| DELETE | `/api/projects/:id/`   | Delete          |
+| Method | URL                  | Action         |
+| ------ | -------------------- | -------------- |
+| GET    | `/api/projects/`     | List all       |
+| POST   | `/api/projects/`     | Create         |
+| GET    | `/api/projects/:id/` | Retrieve one   |
+| PUT    | `/api/projects/:id/` | Full update    |
+| PATCH  | `/api/projects/:id/` | Partial update |
+| DELETE | `/api/projects/:id/` | Delete         |
 
 ### Quick Summary
 
