@@ -5,5 +5,5 @@ from .serializers import DocumentSerializer
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
-    queryset = Document.objects.all().order_by("-created_at")
-    serializer_class = DocumentSerializer
+	queryset = Document.objects.all().order_by('-created_at')
+	serializer_class = DocumentSerializer

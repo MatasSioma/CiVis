@@ -8,7 +8,8 @@
   "editor.codeActionsOnSave": {
     "source.fixAll": "explicit",
     "source.fixAll.eslint": "explicit",
-    "source.fixAll.stylelint": "explicit"
+    "source.fixAll.stylelint": "explicit",
+    "source.organizeImports.ruff": "explicit"
   },
   "eslint.validate": [
     "javascript",
@@ -19,15 +20,5 @@
   ],
   "stylelint.validate": ["css", "postcss", "scss", "vue"],
   "css.lint.unknownAtRules": "ignore",
-  "scss.lint.unknownAtRules": "ignore",
-  "editor.formatOnSave": false,
-  "[vue]": {
-    "editor.defaultFormatter": null
-  },
-  "[typescript]": {
-    "editor.defaultFormatter": null
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": null
-  }
+  "scss.lint.unknownAtRules": "ignore"
 }
