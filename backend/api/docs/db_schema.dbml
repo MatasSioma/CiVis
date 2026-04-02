@@ -1,0 +1,106 @@
+Project CiVis {
+  database_type: 'PostgreSQL'
+  Note: 'Website for job seekers and employers to find each other'
+}
+
+TABLE users {
+  id uuid [pk, default: `gen_random_uuid()`]
+  username varchar(255) [not null, unique]
+  email citext [not null, unique, note: 'case-insensitive email']
+  password varchar(255) [not null]
+  role varchar(64) [not null, note: 'CHECK: job_seeker, employer']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    role
+  }
+}
+
+TABLE companies {
+  id uuid [pk, default: `gen_random_uuid()`]
+  owner uuid [not null, ref: > users.id]
+  name varchar(255) [not null]
+  description varchar(512) [not null]
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    owner
+    name
+  }
+}
+
+TABLE cvs {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user uuid [not null, ref: > users.id]
+  file_url varchar(512) [not null, note: 'URL to stored file location (most likely AWS S3)']
+  embedding vector(1536)
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    user [unique]
+  }
+}
+
+TABLE job_postings {
+  id uuid [pk, default: `gen_random_uuid()`]
+  company uuid [not null, ref: > companies.id]
+  title varchar(255) [not null]
+  description text [not null]
+  location varchar(64)
+  salary_min integer
+  salary_max integer
+  embedding vector(1536)
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    company
+    location
+    (salary_min, salary_max) [name: 'idx_salary_range']
+    created_at
+    embedding [type: hnsw, note: 'vector similarity search']
+  }
+}
+
+TABLE applications {
+  id uuid [pk, default: `gen_random_uuid()`]
+  job_posting uuid [not null, ref: > job_postings.id]
+  applicant uuid [not null, ref: > users.id]
+  cv uuid [not null, ref: > cvs.id]
+  match_score smallint [not null, note: '0-100']
+  created_at timestamptz [default: `now()`]
+  updated_at timestamptz [default: `now()`]
+
+  indexes {
+    (job_posting, applicant) [unique, name: 'idx_unique_application']
+    applicant
+    match_score
+    created_at
+  }
+}
+
+TABLE skills {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar(100) [not null, unique]
+}
+
+TABLE cv_skills {
+  cv_id uuid [ref: > cvs.id]
+  skill_id uuid [ref: > skills.id]
+
+  indexes {
+    (cv_id, skill_id) [pk]
+  }
+}
+
+TABLE job_posting_skills {
+  job_posting_id uuid [ref: > job_postings.id]
+  skill_id uuid [ref: > skills.id]
+
+  indexes {
+    (job_posting_id, skill_id) [pk]
+  }
+}

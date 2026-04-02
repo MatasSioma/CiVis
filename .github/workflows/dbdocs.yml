@@ -1,0 +1,23 @@
+name: Publish dbdocs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/api/docs/db_schema.dbml"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      DBDOCS_TOKEN: ${{ secrets.DBDOCS_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install dbdocs
+        run: npm install -g dbdocs
+
+      - name: Build dbdocs
+        run: dbdocs build backend/api/docs/db_schema.dbml --project CiVis
