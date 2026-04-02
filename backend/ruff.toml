@@ -1,5 +1,9 @@
 line-length = 100
 
+extend-exclude = [
+    "*/migrations/*"
+]
+
 [format]
 quote-style = "single"
 indent-style = "tab"
