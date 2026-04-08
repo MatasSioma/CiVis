@@ -21,7 +21,7 @@ TABLE companies {
   id uuid [pk, default: `gen_random_uuid()`]
   owner uuid [not null, ref: > users.id]
   name varchar(255) [not null]
-  description varchar(512) [not null]
+  description text [not null]
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
@@ -31,10 +31,15 @@ TABLE companies {
   }
 }
 
+TABLE industries {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar(100) [not null, unique]
+}
+
 TABLE cvs {
   id uuid [pk, default: `gen_random_uuid()`]
   user uuid [not null, ref: > users.id]
-  file_url varchar(512) [not null, note: 'URL to stored file location (most likely AWS S3)']
+  file_key varchar(512) [not null, note: 'S3 object key; signed URLs generated at read time']
   embedding vector(1536)
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
@@ -47,18 +52,24 @@ TABLE cvs {
 TABLE job_postings {
   id uuid [pk, default: `gen_random_uuid()`]
   company uuid [not null, ref: > companies.id]
+  industry uuid [not null, ref: > industries.id]
   title varchar(255) [not null]
   description text [not null]
   location varchar(64)
   salary_min integer
   salary_max integer
+  job_type varchar(32) [not null, note: 'CHECK: full_time, part_time, contract, internship, temporary']
+  status varchar(16) [not null, default: 'open', note: 'CHECK: draft, open, closed']
   embedding vector(1536)
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
   indexes {
     company
+    industry
     location
+    job_type
+    status
     (salary_min, salary_max) [name: 'idx_salary_range']
     created_at
     embedding [type: hnsw, note: 'vector similarity search']
@@ -71,13 +82,15 @@ TABLE applications {
   applicant uuid [not null, ref: > users.id]
   cv uuid [not null, ref: > cvs.id]
   match_score smallint [not null, note: '0-100']
+  status varchar(16) [not null, default: 'pending', note: 'CHECK: pending, reviewed, rejected, accepted']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
   indexes {
     (job_posting, applicant) [unique, name: 'idx_unique_application']
     applicant
-    match_score
+    (job_posting, match_score) [name: 'idx_application_ranking', note: 'match_score DESC; serves employer top-candidates query']
+    status
     created_at
   }
 }
