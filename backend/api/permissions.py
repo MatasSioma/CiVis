@@ -17,7 +17,7 @@ class IsJobSeeker(permissions.BasePermission):
 		return bool(
 			request.user
 			and request.user.is_authenticated
-			and request.user.role == User.Role.JOBSEEKER
+			and request.user.role == User.Role.JOB_SEEKER
 		)
 
 
@@ -41,5 +41,5 @@ class IsJobSeekerForWrite(permissions.BasePermission):
 		return bool(
 			request.user
 			and request.user.is_authenticated
-			and request.user.role == User.Role.JOBSEEKER
+			and request.user.role == User.Role.JOB_SEEKER
 		)

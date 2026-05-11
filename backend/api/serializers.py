@@ -83,13 +83,22 @@ class SignupSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
 	personal_code = serializers.CharField(write_only=True)
 	password = serializers.CharField(write_only=True, trim_whitespace=False)
+	role = serializers.ChoiceField(choices=User.Role.choices, write_only=True)
 
 	def validate(self, attrs):
 		personal_code_hash = make_personal_code_hash(attrs['personal_code'])
 		user = User.objects.filter(personal_code_hash=personal_code_hash).first()
 
-		if user is None or not check_password(attrs['password'], user.password):
-			raise serializers.ValidationError('Neteisingas asmens kodas arba slaptazodis.')
+		if user is None:
+			raise serializers.ValidationError('Naudotojas su tokiu asmens kodu nerastas.')
+
+		if not check_password(attrs['password'], user.password):
+			raise serializers.ValidationError('Neteisingas slaptažodis.')
+
+		if user.role != attrs['role']:
+			raise serializers.ValidationError(
+				'Šis naudotojas nepriklauso pasirinktai paskyros rūšiai.'
+			)
 
 		if not user.is_active:
 			raise serializers.ValidationError('Paskyra neaktyvi.')

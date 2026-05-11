@@ -1,6 +1,6 @@
 export type ObjectValues<T> = T[keyof T];
 
-export type UserRole = 'jobseeker' | 'employer';
+export type UserRole = 'job_seeker' | 'employer';
 
 export interface SessionUser {
   id: string;

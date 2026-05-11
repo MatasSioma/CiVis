@@ -9,6 +9,7 @@ export interface AuthSession {
 export interface LoginPayload {
   personal_code: string;
   password: string;
+  role: UserRole;
 }
 
 export interface SignupPayload extends LoginPayload {

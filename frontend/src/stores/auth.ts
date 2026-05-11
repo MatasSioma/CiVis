@@ -17,9 +17,33 @@ const state = reactive<AuthState>({
 
 let sessionPromise: Promise<SessionUser | null> | null = null;
 
+const STORAGE_KEYS = [
+  'civis.auth',
+  'civis.user',
+  'civis.role',
+  'civis.token',
+  'civis.session',
+];
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  employer: 'Darbdavys',
+  job_seeker: 'Darbo ieškantis asmuo',
+};
+
 function setSession(user: SessionUser | null) {
   state.user = user;
   state.isReady = true;
+}
+
+function clearStoredAuth() {
+  STORAGE_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+}
+
+export function getRoleLabel(role: UserRole | null | undefined) {
+  return role ? (ROLE_LABELS[role] ?? '') : '';
 }
 
 export function dashboardRouteName(role: UserRole) {
@@ -75,8 +99,10 @@ export function useAuth() {
 
     try {
       await authApi.logout();
-      setSession(null);
     } finally {
+      sessionPromise = null;
+      clearStoredAuth();
+      setSession(null);
       state.isLoading = false;
     }
   }

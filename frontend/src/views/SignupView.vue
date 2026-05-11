@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@/services/api';
 import { dashboardRouteName, useAuth } from '@/stores/auth';
+import { useToasts } from '@/stores/toasts';
 import type { UserRole } from '@/shared/types';
 
 const router = useRouter();
+const route = useRoute();
 const auth = useAuth();
+const { showToast } = useToasts();
+
+function getInitialRole(): UserRole {
+  return route.query.role === 'employer' || route.query.role === 'job_seeker'
+    ? route.query.role
+    : 'job_seeker';
+}
 
 const form = reactive({
-  role: 'jobseeker' as UserRole,
+  role: getInitialRole(),
   personal_code: '',
   email: '',
   first_name: '',
@@ -22,21 +31,9 @@ const form = reactive({
 const errorMessage = ref('');
 
 const roleOptions: { label: string; value: UserRole }[] = [
-  { label: 'Kandidatas', value: 'jobseeker' },
+  { label: 'Darbo ieškantis asmuo', value: 'job_seeker' },
   { label: 'Darbdavys', value: 'employer' },
 ];
-
-const canSubmit = computed(() => {
-  const hasRequiredUserFields =
-    form.personal_code.trim() &&
-    form.email.trim() &&
-    form.password &&
-    form.password_confirm &&
-    form.password === form.password_confirm;
-  const hasCompany = form.role === 'jobseeker' || form.company_name.trim();
-
-  return Boolean(hasRequiredUserFields && hasCompany);
-});
 
 function getErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.details) {
@@ -55,11 +52,50 @@ function getErrorMessage(error: unknown) {
   return 'Registracija nepavyko.';
 }
 
+function validateSignup() {
+  if (!form.role) {
+    return 'Pasirinkite naudotojo tipą.';
+  }
+
+  if (!form.first_name.trim()) {
+    return 'Įveskite vardą.';
+  }
+
+  if (!form.personal_code.trim()) {
+    return 'Įveskite asmens kodą.';
+  }
+
+  if (!/^\d{11}$/.test(form.personal_code.trim())) {
+    return 'Asmens kodą turi sudaryti 11 skaitmenų.';
+  }
+
+  if (!form.email.trim()) {
+    return 'Įveskite el. pašto adresą.';
+  }
+
+  if (!form.password) {
+    return 'Slaptažodis negali būti tuščias.';
+  }
+
+  if (form.password !== form.password_confirm) {
+    return 'Slaptažodžiai nesutampa.';
+  }
+
+  if (form.role === 'employer' && !form.company_name.trim()) {
+    return 'Įveskite įmonės pavadinimą.';
+  }
+
+  return '';
+}
+
 async function submitSignup() {
   errorMessage.value = '';
 
-  if (form.password !== form.password_confirm) {
-    errorMessage.value = 'Slaptazodziai nesutampa.';
+  const validationError = validateSignup();
+
+  if (validationError) {
+    errorMessage.value = validationError;
+    showToast(validationError, 'error');
     return;
   }
 
@@ -81,32 +117,36 @@ async function submitSignup() {
       return;
     }
 
+    showToast('Registracija sėkminga.', 'success');
     await router.push({ name: dashboardRouteName(user.role) });
   } catch (error) {
     errorMessage.value = getErrorMessage(error);
+    showToast('Registracija nepavyko. Patikrinkite įvestus duomenis.', 'error');
   }
 }
 </script>
 
 <template>
   <form
-    class="w-full max-w-2xl rounded-lg bg-white p-8 shadow-md"
+    class="w-full max-w-[800px] rounded-lg border border-white/70 bg-white p-5 shadow-lg sm:p-6"
     @submit.prevent="submitSignup">
-    <div class="mb-6">
-      <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
-        CiVis
+    <div class="mb-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+        CiVis paskyra
       </p>
-      <h1 class="mt-2 text-2xl font-bold text-gray-950">Registracija</h1>
+      <h1 class="mt-1 text-2xl font-bold leading-tight text-gray-950">
+        Registracija
+      </h1>
     </div>
 
-    <div class="mb-6 grid grid-cols-2 gap-2 rounded-lg bg-primary p-1">
+    <div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-primary bg-background p-1">
       <button
         v-for="option in roleOptions"
         :key="option.value"
-        class="rounded-md px-4 py-2 text-sm font-semibold transition"
+        class="rounded-md px-3 py-2 text-sm font-semibold transition"
         :class="
           form.role === option.value
-            ? 'bg-white text-attention shadow-sm'
+            ? 'bg-white text-attention shadow-sm ring-1 ring-primary'
             : 'text-gray-600 hover:text-gray-950'
         "
         type="button"
@@ -115,99 +155,132 @@ async function submitSignup() {
       </button>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Vardas</span>
-        <input
-          v-model="form.first_name"
-          autocomplete="given-name"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          type="text" />
-      </label>
+    <section>
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+        Asmens informacija
+      </p>
 
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Pavarde</span>
-        <input
-          v-model="form.last_name"
-          autocomplete="family-name"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          type="text" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Asmens kodas</span>
-        <input
-          v-model="form.personal_code"
-          autocomplete="username"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          inputmode="numeric"
-          required
-          type="text" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">El. pastas</span>
-        <input
-          v-model="form.email"
-          autocomplete="email"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          required
-          type="email" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Slaptazodis</span>
-        <input
-          v-model="form.password"
-          autocomplete="new-password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          required
-          type="password" />
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-medium text-gray-700">Pakartoti slaptazodi</span>
-        <input
-          v-model="form.password_confirm"
-          autocomplete="new-password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
-          required
-          type="password" />
-      </label>
-
-      <template v-if="form.role === 'employer'">
-        <label class="block md:col-span-2">
-          <span class="text-sm font-medium text-gray-700">Imones pavadinimas</span>
+      <div class="grid gap-3 md:grid-cols-2">
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Vardas</span>
           <input
-            v-model="form.company_name"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
+            v-model="form.first_name"
+            autocomplete="given-name"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Įveskite vardą"
+            type="text" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Pavardė</span>
+          <input
+            v-model="form.last_name"
+            autocomplete="family-name"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Įveskite pavardę"
+            type="text" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Asmens kodas</span>
+          <input
+            v-model="form.personal_code"
+            autocomplete="username"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            inputmode="numeric"
+            maxlength="11"
+            placeholder="Įveskite 11 skaitmenų asmens kodą"
             required
             type="text" />
         </label>
 
-        <label class="block md:col-span-2">
-          <span class="text-sm font-medium text-gray-700">Imones aprasymas</span>
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">El. paštas</span>
+          <input
+            v-model="form.email"
+            autocomplete="email"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="vardas@pastas.lt"
+            required
+            type="email" />
+        </label>
+      </div>
+    </section>
+
+    <section class="mt-4">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+        Prisijungimo duomenys
+      </p>
+
+      <div class="grid gap-3 md:grid-cols-2">
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Slaptažodis</span>
+          <input
+            v-model="form.password"
+            autocomplete="new-password"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Įveskite slaptažodį"
+            required
+            type="password" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Pakartoti slaptažodį</span>
+          <input
+            v-model="form.password_confirm"
+            autocomplete="new-password"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Pakartokite slaptažodį"
+            required
+            type="password" />
+        </label>
+      </div>
+    </section>
+
+    <section
+      v-if="form.role === 'employer'"
+      class="mt-4 rounded-lg border border-primary bg-background/70 p-3">
+      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+        Įmonės informacija
+      </p>
+
+      <div class="grid gap-3">
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Įmonės pavadinimas</span>
+          <input
+            v-model="form.company_name"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Įveskite įmonės pavadinimą"
+            required
+            type="text" />
+        </label>
+
+        <label class="block">
+          <span class="text-sm font-medium text-gray-700">Įmonės aprašymas</span>
           <textarea
             v-model="form.company_description"
-            class="mt-1 min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary" />
+            class="mt-1 min-h-20 w-full resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Trumpai aprašykite įmonę" />
         </label>
-      </template>
-    </div>
+      </div>
+    </section>
 
     <p v-if="errorMessage" class="mt-4 text-sm text-red-600">
       {{ errorMessage }}
     </p>
 
     <button
-      class="mt-6 w-full rounded-md bg-attention px-4 py-2 font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-300"
-      :disabled="!canSubmit || auth.state.isLoading"
+      class="mt-4 h-11 w-full rounded-md bg-attention px-4 font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-300"
+      :disabled="auth.state.isLoading"
       type="submit">
-      {{ auth.state.isLoading ? 'Kuriama...' : 'Sukurti paskyra' }}
+      {{ auth.state.isLoading ? 'Kuriama...' : 'Sukurti paskyrą' }}
     </button>
 
-    <p class="mt-4 text-center text-sm text-gray-600">
-      Jau turite paskyra?
-      <RouterLink class="font-semibold text-attention" to="/login">
+    <p class="mt-3 text-center text-sm text-gray-600">
+      Jau turite paskyrą?
+      <RouterLink
+        class="font-semibold text-attention underline-offset-4 hover:underline"
+        to="/login">
         Prisijungti
       </RouterLink>
     </p>

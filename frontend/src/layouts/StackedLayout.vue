@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+import BrandLogo from '@/components/BrandLogo.vue';
 import { ROUTE_NAMES, type RouteNamesValues } from '@/router/enums/routeNames';
 
 const { links } = defineProps<{
@@ -22,13 +23,13 @@ const navigation = computed(() =>
 
 <template>
   <nav class="bg-attention text-white">
-    <div class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
+    <div class="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 py-0">
       <RouterLink
-        class="text-lg font-bold text-white no-underline"
-        :to="{ name: ROUTE_NAMES.HOME }"
-        >CiVis</RouterLink
-      >
-      <div class="flex gap-4">
+        class="flex shrink-0 items-center self-center no-underline leading-none"
+        :to="{ name: ROUTE_NAMES.HOME }">
+        <BrandLogo compact />
+      </RouterLink>
+      <div class="flex h-full items-center gap-4">
         <RouterLink
           v-for="link in navigation"
           :key="link.name"
@@ -43,7 +44,7 @@ const navigation = computed(() =>
         >
       </div>
 
-      <div class="ml-auto flex items-center gap-4">
+      <div class="ml-auto flex h-full items-center gap-3">
         <slot name="menu" />
       </div>
     </div>

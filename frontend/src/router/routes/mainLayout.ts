@@ -18,7 +18,7 @@ export const mainLayoutRoutes: RouteRecordRaw[] = [
     path: ROUTE_PATHS.CANDIDATE_DASHBOARD,
     name: ROUTE_NAMES.CANDIDATE_DASHBOARD,
     component: () => import('@/views/CandidateDashboardView.vue'),
-    meta: { requiresAuth: true, roles: ['jobseeker'] },
+    meta: { requiresAuth: true, roles: ['job_seeker'] },
   },
   {
     path: ROUTE_PATHS.EMPLOYER_DASHBOARD,

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 48" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">CiVis</title>
+  <desc id="desc">CiVis darbo paieskos ir idarbinimo sistemos logotipas</desc>
+  <rect x="8" y="8" width="32" height="32" rx="3" fill="#daddd8" stroke="#4b5842" stroke-width="1.5"/>
+  <line x1="14" y1="16" x2="28" y2="16" stroke="#4b5842" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="22" x2="34" y2="22" stroke="#4b5842" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="28" x2="30" y2="28" stroke="#4b5842" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="14" y1="34" x2="26" y2="34" stroke="#4b5842" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="32" cy="24" r="13" fill="#c7d59f"/>
+  <circle cx="32" cy="24" r="9" fill="#b7ce63"/>
+  <circle cx="32" cy="24" r="3" fill="#f8f8f8" opacity="0.9"/>
+  <g opacity="0.6">
+    <circle cx="32" cy="18" r="0.8" fill="#4b5842"/>
+    <circle cx="28" cy="21" r="0.8" fill="#4b5842"/>
+    <circle cx="36" cy="21" r="0.8" fill="#4b5842"/>
+    <circle cx="28" cy="27" r="0.8" fill="#4b5842"/>
+    <circle cx="36" cy="27" r="0.8" fill="#4b5842"/>
+    <circle cx="32" cy="30" r="0.8" fill="#4b5842"/>
+    <circle cx="30" cy="24" r="0.8" fill="#4b5842"/>
+    <circle cx="34" cy="24" r="0.8" fill="#4b5842"/>
+  </g>
+  <circle cx="32" cy="24" r="13" fill="none" stroke="#4b5842" stroke-width="1.5"/>
+  <text x="50" y="33" font-family="Figtree, system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" letter-spacing="0">
+    <tspan fill="#8fb339">Ci</tspan><tspan fill="#b7ce63">Vis</tspan>
+  </text>
+</svg>

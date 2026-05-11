@@ -1,42 +1,64 @@
-<template>
-  <div>
-    <h1 class="mb-4 text-2xl font-bold">Documents</h1>
-    <div v-if="loading" class="text-gray-500">Loading...</div>
-    <div v-else-if="documents.length === 0" class="text-gray-500">
-      No documents yet.
-    </div>
-    <div v-else class="flex flex-col gap-2">
-      <div
-        v-for="doc in documents"
-        :key="doc.id"
-        class="rounded border border-gray-200 px-4 py-3">
-        <h5 class="font-semibold">{{ doc.title }}</h5>
-        <p class="text-gray-500">{{ doc.content }}</p>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { watchEffect } from 'vue';
+import { useRouter } from 'vue-router';
+import { ROUTE_NAMES } from '@/router/enums/routeNames';
+import { dashboardRouteName, useAuth } from '@/stores/auth';
 
-interface Document {
-  id: number;
-  title: string;
-  content: string;
-}
+const auth = useAuth();
+const router = useRouter();
 
-const documents = ref<Document[]>([]);
-const loading = ref(true);
-
-onMounted(async () => {
-  try {
-    const res = await fetch('/api/documents/');
-    documents.value = await res.json();
-  } catch {
-    console.error('Failed to fetch documents');
-  } finally {
-    loading.value = false;
+watchEffect(() => {
+  if (auth.state.user) {
+    router.replace({ name: dashboardRouteName(auth.state.user.role) });
   }
 });
 </script>
+
+<template>
+  <section
+    v-if="!auth.state.user"
+    class="grid min-h-[calc(100vh-112px)] items-center gap-10 py-10 lg:grid-cols-[1.1fr_0.9fr]">
+    <div class="max-w-2xl">
+      <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
+        Darbo paieškos ir įdarbinimo sistema
+      </p>
+      <h1 class="mt-3 text-4xl font-bold leading-tight text-gray-950 md:text-5xl">
+        Darbo paieška ir kandidatų atranka vienoje vietoje
+      </h1>
+      <p class="mt-5 text-lg leading-8 text-gray-700">
+        Platforma padeda darbo ieškantiems asmenims pristatyti savo patirtį, o
+        darbdaviams patogiai valdyti įmonės skelbimus ir paraiškas.
+      </p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <RouterLink
+          class="rounded-md bg-attention px-5 py-3 font-semibold text-white no-underline transition hover:bg-secondary"
+          :to="{ name: ROUTE_NAMES.LOGIN }">
+          Prisijungti
+        </RouterLink>
+        <RouterLink
+          class="rounded-md bg-primary px-5 py-3 font-semibold text-attention no-underline transition hover:bg-secondary"
+          :to="{ name: ROUTE_NAMES.SIGNUP }">
+          Registruotis
+        </RouterLink>
+      </div>
+    </div>
+
+    <div class="grid gap-4">
+      <article class="rounded-lg border border-white/70 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-950">Darbo ieškantiems asmenims</h2>
+        <p class="mt-2 text-sm leading-6 text-gray-600">
+          Kurkite profilį, valdykite CV ir sekite savo paraiškas be papildomo
+          triukšmo.
+        </p>
+      </article>
+      <article class="rounded-lg border border-white/70 bg-white p-5 shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-950">Darbdaviams</h2>
+        <p class="mt-2 text-sm leading-6 text-gray-600">
+          Tvarkykite įmonės informaciją, skelbimus ir kandidatų paraiškas vienoje
+          darbo erdvėje.
+        </p>
+      </article>
+    </div>
+  </section>
+</template>
