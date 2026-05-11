@@ -5,7 +5,6 @@ import re
 from django.conf import settings
 from rest_framework import serializers
 
-
 PERSONAL_CODE_PATTERN = re.compile(r'^\d{11}$')
 
 

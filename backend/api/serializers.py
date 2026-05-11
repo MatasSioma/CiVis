@@ -3,10 +3,10 @@ from django.contrib.auth.hashers import check_password
 from rest_framework import serializers
 
 from .models import (
-	Application,
 	CV,
-	CVSkill,
+	Application,
 	Company,
+	CVSkill,
 	JobPosting,
 	JobPostingSkill,
 	Skill,

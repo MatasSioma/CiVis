@@ -9,8 +9,8 @@ from .views import (
 	LoginView,
 	LogoutView,
 	SessionView,
-	SkillViewSet,
 	SignupView,
+	SkillViewSet,
 )
 
 router = DefaultRouter()

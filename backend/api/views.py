@@ -5,7 +5,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Application, CV, Company, JobPosting, Skill, User
+from .models import CV, Application, Company, JobPosting, Skill, User
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
@@ -13,8 +13,8 @@ from .serializers import (
 	CVSerializer,
 	JobPostingSerializer,
 	LoginSerializer,
-	SkillSerializer,
 	SignupSerializer,
+	SkillSerializer,
 	UserSerializer,
 )
 
