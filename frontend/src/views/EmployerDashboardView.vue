@@ -7,7 +7,7 @@ const { state } = useAuth();
 <template>
   <section class="space-y-6">
     <div>
-      <p class="text-sm font-semibold uppercase tracking-wide text-lime-moss">
+      <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
         Darbdavio paskyra
       </p>
       <h1 class="mt-2 text-3xl font-bold text-gray-950">

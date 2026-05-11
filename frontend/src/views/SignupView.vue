@@ -93,7 +93,7 @@ async function submitSignup() {
     class="w-full max-w-2xl rounded-lg bg-white p-8 shadow-md"
     @submit.prevent="submitSignup">
     <div class="mb-6">
-      <p class="text-sm font-semibold uppercase tracking-wide text-lime-moss">
+      <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
         CiVis
       </p>
       <h1 class="mt-2 text-2xl font-bold text-gray-950">Registracija</h1>
@@ -121,7 +121,7 @@ async function submitSignup() {
         <input
           v-model="form.first_name"
           autocomplete="given-name"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           type="text" />
       </label>
 
@@ -130,7 +130,7 @@ async function submitSignup() {
         <input
           v-model="form.last_name"
           autocomplete="family-name"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           type="text" />
       </label>
 
@@ -139,7 +139,7 @@ async function submitSignup() {
         <input
           v-model="form.personal_code"
           autocomplete="username"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           inputmode="numeric"
           required
           type="text" />
@@ -150,7 +150,7 @@ async function submitSignup() {
         <input
           v-model="form.email"
           autocomplete="email"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           required
           type="email" />
       </label>
@@ -160,7 +160,7 @@ async function submitSignup() {
         <input
           v-model="form.password"
           autocomplete="new-password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           required
           type="password" />
       </label>
@@ -170,7 +170,7 @@ async function submitSignup() {
         <input
           v-model="form.password_confirm"
           autocomplete="new-password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           required
           type="password" />
       </label>
@@ -180,7 +180,7 @@ async function submitSignup() {
           <span class="text-sm font-medium text-gray-700">Imones pavadinimas</span>
           <input
             v-model="form.company_name"
-            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
             required
             type="text" />
         </label>
@@ -189,7 +189,7 @@ async function submitSignup() {
           <span class="text-sm font-medium text-gray-700">Imones aprasymas</span>
           <textarea
             v-model="form.company_description"
-            class="mt-1 min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary" />
+            class="mt-1 min-h-24 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary" />
         </label>
       </template>
     </div>
@@ -199,7 +199,7 @@ async function submitSignup() {
     </p>
 
     <button
-      class="mt-6 w-full rounded-md bg-attention px-4 py-2 font-semibold text-white transition hover:bg-lime-moss disabled:cursor-not-allowed disabled:bg-gray-300"
+      class="mt-6 w-full rounded-md bg-attention px-4 py-2 font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-300"
       :disabled="!canSubmit || auth.state.isLoading"
       type="submit">
       {{ auth.state.isLoading ? 'Kuriama...' : 'Sukurti paskyra' }}

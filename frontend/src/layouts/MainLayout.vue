@@ -21,7 +21,7 @@ const auth = useAuth();
           {{ auth.state.user.role }}
         </RouterLink>
         <button
-          class="bg-secondary text-attention hover:bg-secondary rounded px-3 py-1"
+          class="rounded bg-primary px-3 py-1 text-attention hover:bg-secondary"
           type="button"
           @click="auth.logout">
           Atsijungti
@@ -34,13 +34,13 @@ const auth = useAuth();
           >Login</RouterLink
         >
         <RouterLink
-          class="bg-primary text-attention hover:bg-secondary rounded px-3 py-1 no-underline"
+          class="rounded bg-primary px-3 py-1 text-attention no-underline hover:bg-secondary"
           :to="{ name: ROUTE_NAMES.SIGNUP }"
           >Sign Up</RouterLink
         >
       </template>
     </template>
-    <main class="mx-auto max-w-7xl px-4 py-6">
+    <main class="mx-auto min-h-[calc(100vh-52px)] max-w-7xl bg-background px-4 py-6">
       <RouterView />
     </main>
   </StackedLayout>

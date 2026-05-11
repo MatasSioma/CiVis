@@ -55,7 +55,7 @@ async function submitLogin() {
     class="w-full max-w-md rounded-lg bg-white p-8 shadow-md"
     @submit.prevent="submitLogin">
     <div class="mb-6">
-      <p class="text-sm font-semibold uppercase tracking-wide text-lime-moss">
+      <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
         CiVis
       </p>
       <h1 class="mt-2 text-2xl font-bold text-gray-950">Prisijungimas</h1>
@@ -67,7 +67,7 @@ async function submitLogin() {
         <input
           v-model="form.personal_code"
           autocomplete="username"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           inputmode="numeric"
           name="personal_code"
           required
@@ -79,7 +79,7 @@ async function submitLogin() {
         <input
           v-model="form.password"
           autocomplete="current-password"
-          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-lime-moss focus:ring-2 focus:ring-secondary"
+          class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-gray-950 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary"
           name="password"
           required
           type="password" />
@@ -91,7 +91,7 @@ async function submitLogin() {
     </p>
 
     <button
-      class="mt-6 w-full rounded-md bg-attention px-4 py-2 font-semibold text-white transition hover:bg-lime-moss disabled:cursor-not-allowed disabled:bg-gray-300"
+      class="mt-6 w-full rounded-md bg-attention px-4 py-2 font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-300"
       :disabled="!canSubmit || auth.state.isLoading"
       type="submit">
       {{ auth.state.isLoading ? 'Jungiama...' : 'Prisijungti' }}
