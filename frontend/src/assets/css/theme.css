@@ -1,4 +1,15 @@
 @theme {
-  /* Čia visos custom spalvos, šriftai ir pnš */
-  --font-family-primary: 'Poppins';
+  --font-family-primary: 'Figtree', sans-serif;
+
+  --color-dust-grey: #daddd8;
+  --color-tea-green: #c7d59f;
+  --color-yellow-green: #b7ce63;
+  --color-lime-moss: #8fb339;
+  --color-ebony: #4b5842;
+
+  --color-primary: var(--color-dust-grey);
+  --color-secondary: var(--color-tea-green);
+  --color-accent: var(--color-yellow-green);
+  --color-success: var(--color-lime-moss);
+  --color-attention: var(--color-ebony);
 }

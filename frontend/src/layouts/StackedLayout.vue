@@ -21,7 +21,7 @@ const navigation = computed(() =>
 </script>
 
 <template>
-  <nav class="bg-blue-600 text-white">
+  <nav class="bg-attention text-white">
     <div class="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
       <RouterLink
         class="text-lg font-bold text-white no-underline"

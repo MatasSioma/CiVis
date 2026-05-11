@@ -7,12 +7,14 @@ TABLE users {
   id uuid [pk, default: `gen_random_uuid()`]
   username varchar(255) [not null, unique]
   email citext [not null, unique, note: 'case-insensitive email']
+  personal_code_hash varchar(64) [unique, note: 'HMAC-SHA256 of normalized personal code; plaintext is never stored']
   password varchar(255) [not null]
-  role varchar(64) [not null, note: 'CHECK: job_seeker, employer']
+  role varchar(64) [not null, note: 'CHECK: jobseeker, employer']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
   indexes {
+    personal_code_hash
     role
   }
 }

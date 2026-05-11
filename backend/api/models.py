@@ -7,17 +7,19 @@ from pgvector.django import HnswIndex, VectorField
 
 class User(AbstractUser):
 	class Role(models.TextChoices):
-		JOB_SEEKER = 'job_seeker', 'Job Seeker'
+		JOBSEEKER = 'jobseeker', 'Job Seeker'
 		EMPLOYER = 'employer', 'Employer'
 
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	email = models.EmailField(unique=True)
+	personal_code_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
 	role = models.CharField(max_length=64, choices=Role.choices)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
 		indexes = [
+			models.Index(fields=['personal_code_hash']),
 			models.Index(fields=['role']),
 		]
 

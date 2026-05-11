@@ -20,12 +20,15 @@ services:
     environment:
       DATABASE_URL: postgres://civis:civis@db:5432/civis
       DEBUG: "true"
+      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     depends_on:
       - db
 
   frontend:
     build: ./frontend
     command: npm run dev -- --host 0.0.0.0
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

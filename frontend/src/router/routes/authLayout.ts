@@ -7,10 +7,12 @@ export const authLayoutRoutes: RouteRecordRaw[] = [
     path: ROUTE_PATHS.LOGIN,
     name: ROUTE_NAMES.LOGIN,
     component: () => import('@/views/LoginView.vue'),
+    meta: { guestOnly: true },
   },
   {
     path: ROUTE_PATHS.SIGNUP,
     name: ROUTE_NAMES.SIGNUP,
     component: () => import('@/views/SignupView.vue'),
+    meta: { guestOnly: true },
   },
 ];
