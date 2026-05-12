@@ -21,6 +21,12 @@ MINIO_USE_SSL = os.environ.get('MINIO_USE_SSL', 'false').lower() == 'true'
 
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

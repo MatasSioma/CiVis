@@ -9,6 +9,7 @@ from .models import (
 	Industry,
 	JobPosting,
 	JobPostingSkill,
+	PendingCVPayment,
 	Skill,
 	User,
 )
@@ -97,6 +98,13 @@ class CVSkillAdmin(admin.ModelAdmin):
 	list_filter = ('type',)
 	search_fields = ('cv__user__username', 'skill__name', 'description')
 	autocomplete_fields = ('cv', 'skill')
+
+
+@admin.register(PendingCVPayment)
+class PendingCVPaymentAdmin(admin.ModelAdmin):
+	list_display = ('user', 'stripe_session_id', 'created_at')
+	search_fields = ('user__username', 'stripe_session_id')
+	readonly_fields = ('stripe_session_id', 'skills_data')
 
 
 @admin.register(JobPostingSkill)

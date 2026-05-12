@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { useToasts } from '@/stores/toasts';
 import { cvApi, type ExtractedSkill } from '@/services/cv';
 import { ApiError } from '@/services/api';
 import FormCard from '@/components/FormCard.vue';
 import SkillRowEditor from '@/components/SkillRowEditor.vue';
 
-const router = useRouter();
 const { showToast } = useToasts();
 
 type SkillType = 'hard' | 'soft' | 'experience';
@@ -229,16 +226,18 @@ async function handleSubmit() {
       years_of_experience: s.years_of_experience,
     }));
 
-    await cvApi.submit({ file_key: fileKey.value, skills: payload });
-    showToast('CV sėkmingai išsaugotas.', 'success');
-    await router.push({ name: ROUTE_NAMES.CANDIDATE_DASHBOARD });
+    const { checkout_url } = await cvApi.checkout({
+      file_key: fileKey.value,
+      skills: payload,
+    });
+    window.location.href = checkout_url;
   } catch (error) {
     if (error instanceof ApiError) {
       const details = error.details as Record<string, string[]>;
       const firstMsg = Object.values(details).flat()[0];
-      errorMessage.value = firstMsg ?? 'Įvyko klaida saugant CV.';
+      errorMessage.value = firstMsg ?? 'Įvyko klaida kuriant mokėjimą.';
     } else {
-      errorMessage.value = 'Įvyko klaida saugant CV.';
+      errorMessage.value = 'Įvyko klaida kuriant mokėjimą.';
     }
     showToast(errorMessage.value, 'error');
   } finally {

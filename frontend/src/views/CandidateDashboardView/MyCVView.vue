@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
+import { useToasts } from '@/stores/toasts';
 import { cvApi, type CVDetailResponse } from '@/services/cv';
 import { ApiError } from '@/services/api';
 import FormCard from '@/components/FormCard.vue';
+
+const route = useRoute();
+const { showToast } = useToasts();
 
 const cv = ref<CVDetailResponse | null>(null);
 const isLoading = ref(true);
@@ -14,6 +19,8 @@ const SKILL_GROUPS = [
   { type: 'soft', label: 'Socialiniai įgūdžiai' },
   { type: 'experience', label: 'Patirtis' },
 ] as const;
+
+const isPaymentReturn = route.query.payment === 'success';
 
 function skillsByType(type: string) {
   return cv.value?.skills.filter((s) => s.type === type) ?? [];
@@ -27,15 +34,29 @@ function formatDate(iso: string): string {
   });
 }
 
-onMounted(async () => {
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchCV(retries: number) {
   try {
     cv.value = await cvApi.getMyCV();
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
+      if (retries > 0 && isPaymentReturn) {
+        await delay(1500);
+        return fetchCV(retries - 1);
+      }
       notFound.value = true;
     }
-  } finally {
-    isLoading.value = false;
+  }
+}
+
+onMounted(async () => {
+  await fetchCV(isPaymentReturn ? 3 : 0);
+  isLoading.value = false;
+  if (isPaymentReturn && cv.value) {
+    showToast('Mokėjimas sėkmingas! CV išsaugotas.', 'success');
   }
 });
 </script>

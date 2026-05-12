@@ -1,6 +1,8 @@
+import stripe
+from django.conf import settings as django_settings
 from django.contrib.auth import login, logout
 from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from pypdf import PdfReader
 from rest_framework import permissions, status, viewsets
 from rest_framework.parsers import MultiPartParser
@@ -8,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .extraction import extract_skills_from_text
-from .models import CV, Application, Company, CVSkill, JobPosting, Skill, User
+from .models import CV, Application, Company, CVSkill, JobPosting, PendingCVPayment, Skill, User
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
@@ -23,6 +25,8 @@ from .serializers import (
 	UserSerializer,
 )
 from .storage import upload_cv
+
+stripe.api_key = django_settings.STRIPE_SECRET_KEY
 
 
 def set_session_context(request, user):
@@ -135,7 +139,36 @@ class CVUploadView(APIView):
 		return Response({'file_key': file_key, 'skills': skills})
 
 
+def create_cv_for_user(user, file_key, skills_data):
+	CV.objects.filter(user=user).delete()
+	cv = CV.objects.create(user=user, file_key=file_key)
+	for skill_data in skills_data:
+		skill_name = skill_data['name'].strip().lower()
+		skill, _ = Skill.objects.get_or_create(name=skill_name)
+		CVSkill.objects.create(
+			cv=cv,
+			skill=skill,
+			type=skill_data['type'],
+			years_of_experience=skill_data['years_of_experience'],
+		)
+	return cv
+
+
 class CVSubmitView(APIView):
+	permission_classes = [IsJobSeeker]
+
+	def post(self, request):
+		serializer = CVSubmitSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		cv = create_cv_for_user(
+			request.user,
+			serializer.validated_data['file_key'],
+			serializer.validated_data['skills'],
+		)
+		return Response(CVSerializer(cv).data, status=status.HTTP_201_CREATED)
+
+
+class CVCheckoutView(APIView):
 	permission_classes = [IsJobSeeker]
 
 	def post(self, request):
@@ -145,21 +178,55 @@ class CVSubmitView(APIView):
 		file_key = serializer.validated_data['file_key']
 		skills_data = serializer.validated_data['skills']
 
-		CV.objects.filter(user=request.user).delete()
+		session = stripe.checkout.Session.create(
+			payment_method_types=['card'],
+			line_items=[{'price': django_settings.STRIPE_PRICE_ID, 'quantity': 1}],
+			mode='payment',
+			success_url=f'{django_settings.FRONTEND_URL}/candidate/my-cv?payment=success',
+			cancel_url=f'{django_settings.FRONTEND_URL}/candidate/upload-cv?payment=cancelled',
+			client_reference_id=str(request.user.id),
+		)
 
-		cv = CV.objects.create(user=request.user, file_key=file_key)
+		PendingCVPayment.objects.filter(user=request.user).delete()
+		PendingCVPayment.objects.create(
+			user=request.user,
+			file_key=file_key,
+			skills_data=skills_data,
+			stripe_session_id=session.id,
+		)
 
-		for skill_data in skills_data:
-			skill_name = skill_data['name'].strip().lower()
-			skill, _created = Skill.objects.get_or_create(name=skill_name)
-			CVSkill.objects.create(
-				cv=cv,
-				skill=skill,
-				type=skill_data['type'],
-				years_of_experience=skill_data['years_of_experience'],
+		return Response({'checkout_url': session.url})
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StripeWebhookView(APIView):
+	permission_classes = [permissions.AllowAny]
+	authentication_classes = []
+
+	def post(self, request):
+		payload = request.body
+		sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+
+		try:
+			event = stripe.Webhook.construct_event(
+				payload, sig_header, django_settings.STRIPE_WEBHOOK_SECRET
 			)
+		except (ValueError, stripe.SignatureVerificationError):
+			return Response(status=status.HTTP_400_BAD_REQUEST)
 
-		return Response(CVSerializer(cv).data, status=status.HTTP_201_CREATED)
+		if event['type'] == 'checkout.session.completed':
+			session_data = event['data']['object']
+			try:
+				pending = PendingCVPayment.objects.select_related('user').get(
+					stripe_session_id=session_data['id']
+				)
+			except PendingCVPayment.DoesNotExist:
+				return Response(status=status.HTTP_200_OK)
+
+			create_cv_for_user(pending.user, pending.file_key, pending.skills_data)
+			pending.delete()
+
+		return Response(status=status.HTTP_200_OK)
 
 
 class CVMeView(APIView):

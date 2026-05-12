@@ -54,4 +54,9 @@ export const cvApi = {
       body: payload,
     }),
   getMyCV: () => apiRequest<CVDetailResponse>('/cv/me/'),
+  checkout: (payload: SubmitPayload) =>
+    apiRequest<{ checkout_url: string }>('/cv/checkout/', {
+      method: 'POST',
+      body: payload,
+    }),
 };

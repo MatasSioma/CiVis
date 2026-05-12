@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
 	ApplicationViewSet,
 	CompanyViewSet,
+	CVCheckoutView,
 	CVMeView,
 	CVSubmitView,
 	CVUploadView,
@@ -14,6 +15,7 @@ from .views import (
 	SessionView,
 	SignupView,
 	SkillViewSet,
+	StripeWebhookView,
 )
 
 router = DefaultRouter()
@@ -31,5 +33,7 @@ urlpatterns = [
 	path('cv/me/', CVMeView.as_view(), name='cv-me'),
 	path('cv/upload/', CVUploadView.as_view(), name='cv-upload'),
 	path('cv/submit/', CVSubmitView.as_view(), name='cv-submit'),
+	path('cv/checkout/', CVCheckoutView.as_view(), name='cv-checkout'),
+	path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
 	path('', include(router.urls)),
 ]
