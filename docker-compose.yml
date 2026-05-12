@@ -21,7 +21,8 @@ services:
       DATABASE_URL: postgres://civis:civis@db:5432/civis
       DEBUG: "true"
       CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-      OPEN_API_KEY: ${OPEN_API_KEY:-}
+    env_file:
+      - .env
     depends_on:
       - db
 
