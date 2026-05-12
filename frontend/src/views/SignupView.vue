@@ -91,8 +91,7 @@ async function continueToGateway() {
     email: form.email.trim(),
     first_name: form.first_name.trim(),
     last_name: form.last_name.trim(),
-    date_of_birth:
-      form.role === 'job_seeker' ? form.date_of_birth : undefined,
+    date_of_birth: form.role === 'job_seeker' ? form.date_of_birth : undefined,
     company_name:
       form.role === 'employer' ? form.company_name.trim() : undefined,
     company_description:
@@ -105,7 +104,7 @@ async function continueToGateway() {
 
 <template>
   <form
-    class="w-full max-w-[800px] rounded-lg border border-white/70 bg-white p-5 shadow-lg sm:p-6"
+    class="w-full max-w-200 rounded-lg border border-white/70 bg-white p-5 shadow-lg sm:p-6"
     @submit.prevent="continueToGateway">
     <div class="mb-4">
       <RouterLink
@@ -114,10 +113,11 @@ async function continueToGateway() {
         class="inline-block">
         <BrandLogo />
       </RouterLink>
-      <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-secondary">
+      <p
+        class="text-secondary mt-4 text-xs font-semibold tracking-wide uppercase">
         CiVis paskyra
       </p>
-      <h1 class="mt-1 text-2xl font-bold leading-tight text-gray-950">
+      <h1 class="mt-1 text-2xl leading-tight font-bold text-gray-950">
         Registracija
       </h1>
       <p class="mt-1 text-sm text-gray-600">
@@ -125,14 +125,15 @@ async function continueToGateway() {
       </p>
     </div>
 
-    <div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-primary bg-background p-1">
+    <div
+      class="border-primary bg-background mb-4 grid grid-cols-2 gap-1 rounded-lg border p-1">
       <button
         v-for="option in roleOptions"
         :key="option.value"
         class="rounded-md px-3 py-2 text-sm font-semibold transition"
         :class="
           form.role === option.value
-            ? 'bg-white text-attention shadow-sm ring-1 ring-primary'
+            ? 'text-attention ring-primary bg-white shadow-sm ring-1'
             : 'text-gray-600 hover:text-gray-950'
         "
         type="button"
@@ -142,7 +143,8 @@ async function continueToGateway() {
     </div>
 
     <section>
-      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+      <p
+        class="text-secondary mb-2 text-xs font-semibold tracking-wide uppercase">
         Asmens informacija
       </p>
 
@@ -152,7 +154,7 @@ async function continueToGateway() {
           <input
             v-model="form.first_name"
             autocomplete="given-name"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             placeholder="Įveskite vardą"
             type="text" />
         </label>
@@ -162,7 +164,7 @@ async function continueToGateway() {
           <input
             v-model="form.last_name"
             autocomplete="family-name"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             placeholder="Įveskite pavardę"
             type="text" />
         </label>
@@ -172,7 +174,7 @@ async function continueToGateway() {
           <input
             v-model="form.email"
             autocomplete="email"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             placeholder="vardas@pastas.lt"
             required
             type="email" />
@@ -183,7 +185,7 @@ async function continueToGateway() {
           <input
             v-model="form.date_of_birth"
             autocomplete="bday"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             required
             type="date" />
         </label>
@@ -192,27 +194,32 @@ async function continueToGateway() {
 
     <section
       v-if="form.role === 'employer'"
-      class="mt-4 rounded-lg border border-primary bg-background/70 p-3">
-      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+      class="border-primary bg-background/70 mt-4 rounded-lg border p-3">
+      <p
+        class="text-secondary mb-2 text-xs font-semibold tracking-wide uppercase">
         Įmonės informacija
       </p>
 
       <div class="grid gap-3">
         <label class="block">
-          <span class="text-sm font-medium text-gray-700">Įmonės pavadinimas</span>
+          <span class="text-sm font-medium text-gray-700"
+            >Įmonės pavadinimas</span
+          >
           <input
             v-model="form.company_name"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             placeholder="Įveskite įmonės pavadinimą"
             required
             type="text" />
         </label>
 
         <label class="block">
-          <span class="text-sm font-medium text-gray-700">Įmonės aprašymas</span>
+          <span class="text-sm font-medium text-gray-700"
+            >Įmonės aprašymas</span
+          >
           <textarea
             v-model="form.company_description"
-            class="mt-1 min-h-20 w-full resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 min-h-20 w-full resize-y rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
             placeholder="Trumpai aprašykite įmonę" />
         </label>
       </div>
@@ -223,7 +230,7 @@ async function continueToGateway() {
     </p>
 
     <button
-      class="mt-4 h-11 w-full rounded-md bg-attention px-4 font-semibold text-white transition hover:bg-secondary"
+      class="bg-attention hover:bg-secondary mt-4 h-11 w-full rounded-md px-4 font-semibold text-white transition"
       type="submit">
       Tęsti į Semėno vartus
     </button>
@@ -231,7 +238,7 @@ async function continueToGateway() {
     <p class="mt-3 text-center text-sm text-gray-600">
       Jau turite paskyrą?
       <RouterLink
-        class="font-semibold text-attention underline-offset-4 hover:underline"
+        class="text-attention font-semibold underline-offset-4 hover:underline"
         to="/login">
         Prisijungti
       </RouterLink>

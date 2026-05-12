@@ -65,21 +65,22 @@ async function continueToGateway() {
         class="inline-block">
         <BrandLogo large />
       </RouterLink>
-      <p class="mt-8 text-sm font-semibold uppercase tracking-wide text-secondary">
+      <p
+        class="text-secondary mt-8 text-sm font-semibold tracking-wide uppercase">
         Semėno vartai
       </p>
-      <h1 class="mt-3 text-3xl font-bold leading-tight text-gray-950">
+      <h1 class="mt-3 text-3xl leading-tight font-bold text-gray-950">
         Prisijungimas per Semėno vartus
       </h1>
       <p class="mt-4 leading-7 text-gray-700">
-        Pasirinkite naudotojo tipą, kad būtumėte nukreipti į Semėno vartų portalą tapatybei
-        patvirtinti.
+        Pasirinkite naudotojo tipą, kad būtumėte nukreipti į Semėno vartų
+        portalą tapatybei patvirtinti.
       </p>
 
-      <div class="mt-6 rounded-lg border border-primary bg-background p-4">
+      <div class="border-primary bg-background mt-6 rounded-lg border p-4">
         <div class="flex items-start gap-3">
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-attention text-lg font-bold text-white">
+            class="bg-attention flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-lg font-bold text-white">
             ID
           </div>
           <div>
@@ -96,7 +97,7 @@ async function continueToGateway() {
       class="rounded-lg border border-white/80 bg-white p-8 shadow-md"
       @submit.prevent="continueToGateway">
       <div class="border-b border-gray-200 pb-5">
-        <p class="text-sm font-semibold uppercase tracking-wide text-secondary">
+        <p class="text-secondary text-sm font-semibold tracking-wide uppercase">
           Prisijungimo pasirinkimas
         </p>
         <h2 class="mt-2 text-2xl font-bold text-gray-950">Naudotojo tipas</h2>
@@ -106,11 +107,11 @@ async function continueToGateway() {
         <button
           v-for="option in roleOptions"
           :key="option.value"
-          class="rounded-lg border p-4 text-left transition"
+          class="cursor-pointer rounded-lg border p-4 text-left transition"
           :class="
             selectedRole === option.value
               ? 'border-attention bg-primary shadow-sm'
-              : 'border-gray-200 bg-white hover:border-secondary hover:bg-background'
+              : 'hover:border-secondary hover:bg-background border-gray-200 bg-white'
           "
           type="button"
           @click="selectedRole = option.value">
@@ -135,7 +136,7 @@ async function continueToGateway() {
       </div>
 
       <button
-        class="mt-6 w-full rounded-md bg-attention px-4 py-3 font-semibold text-white transition hover:bg-secondary"
+        class="bg-attention hover:bg-secondary mt-6 w-full cursor-pointer rounded-md px-4 py-3 font-semibold text-white transition"
         type="submit">
         Tęsti į Semėno vartus
       </button>
@@ -146,7 +147,7 @@ async function continueToGateway() {
 
       <p class="mt-4 text-center text-sm text-gray-600">
         Neturite paskyros?
-        <RouterLink class="font-semibold text-attention" :to="signupRoute">
+        <RouterLink class="text-attention font-semibold" :to="signupRoute">
           Registruotis
         </RouterLink>
       </p>
