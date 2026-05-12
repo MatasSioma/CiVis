@@ -8,6 +8,8 @@ export const ROUTE_NAMES = {
   LOGIN: 'Login',
   SIGNUP: 'Signup',
   GATEWAY: 'Gateway',
+  UPLOAD_CV: 'UploadCV',
+  MY_CV: 'MyCV',
 } as const;
 
 export type RouteNamesValues = ObjectValues<typeof ROUTE_NAMES>;

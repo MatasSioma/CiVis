@@ -130,7 +130,7 @@ async function continueToGateway() {
       <button
         v-for="option in roleOptions"
         :key="option.value"
-        class="rounded-md px-3 py-2 text-sm font-semibold transition"
+        class="cursor-pointer rounded-md px-3 py-2 text-sm font-semibold transition"
         :class="
           form.role === option.value
             ? 'text-attention ring-primary bg-white shadow-sm ring-1'
@@ -230,7 +230,7 @@ async function continueToGateway() {
     </p>
 
     <button
-      class="bg-attention hover:bg-secondary mt-4 h-11 w-full rounded-md px-4 font-semibold text-white transition"
+      class="bg-attention hover:bg-secondary mt-4 h-11 w-full cursor-pointer rounded-md px-4 font-semibold text-white transition"
       type="submit">
       Tęsti į Semėno vartus
     </button>

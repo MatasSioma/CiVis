@@ -107,6 +107,7 @@ TABLE cv_skills {
   skill_id uuid [not null, ref: > skills.id]
   type varchar(16) [not null, default: 'hard', note: 'CHECK: hard, soft, experience']
   description text
+  years_of_experience smallint [not null, default: 0, note: 'non-negative integer']
   embedding vector(1536)
 
   indexes {

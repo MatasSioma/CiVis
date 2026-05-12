@@ -1,22 +1,28 @@
 from django.contrib.auth import login, logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
+from pypdf import PdfReader
 from rest_framework import permissions, status, viewsets
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CV, Application, Company, JobPosting, Skill, User
+from .extraction import extract_skills_from_text
+from .models import CV, Application, Company, CVSkill, JobPosting, Skill, User
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
 	CompanySerializer,
+	CVDetailSerializer,
 	CVSerializer,
+	CVSubmitSerializer,
 	JobPostingSerializer,
 	LoginSerializer,
 	SignupSerializer,
 	SkillSerializer,
 	UserSerializer,
 )
+from .storage import upload_cv
 
 
 def set_session_context(request, user):
@@ -87,6 +93,89 @@ class LogoutView(APIView):
 		return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CVUploadView(APIView):
+	permission_classes = [IsJobSeeker]
+	parser_classes = [MultiPartParser]
+
+	def post(self, request):
+		file = request.FILES.get('file')
+
+		if not file:
+			return Response(
+				{'file': ['Failas privalomas.']},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		if file.content_type != 'application/pdf':
+			return Response(
+				{'file': ['Leidžiami tik PDF failai.']},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		if file.size > 10 * 1024 * 1024:
+			return Response(
+				{'file': ['Failo dydis negali viršyti 10 MB.']},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		reader = PdfReader(file)
+		text = '\n'.join(page.extract_text() or '' for page in reader.pages)
+
+		file.seek(0)
+		file_key = upload_cv(file, file.name)
+
+		if not text.strip():
+			return Response(
+				{'file': ['Nepavyko išgauti teksto iš PDF failo.']},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		skills = extract_skills_from_text(text)
+
+		return Response({'file_key': file_key, 'skills': skills})
+
+
+class CVSubmitView(APIView):
+	permission_classes = [IsJobSeeker]
+
+	def post(self, request):
+		serializer = CVSubmitSerializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+
+		file_key = serializer.validated_data['file_key']
+		skills_data = serializer.validated_data['skills']
+
+		CV.objects.filter(user=request.user).delete()
+
+		cv = CV.objects.create(user=request.user, file_key=file_key)
+
+		for skill_data in skills_data:
+			skill_name = skill_data['name'].strip().lower()
+			skill, _created = Skill.objects.get_or_create(name=skill_name)
+			CVSkill.objects.create(
+				cv=cv,
+				skill=skill,
+				type=skill_data['type'],
+				years_of_experience=skill_data['years_of_experience'],
+			)
+
+		return Response(CVSerializer(cv).data, status=status.HTTP_201_CREATED)
+
+
+class CVMeView(APIView):
+	permission_classes = [IsJobSeeker]
+
+	def get(self, request):
+		try:
+			cv = CV.objects.prefetch_related('cvskill_set__skill').get(user=request.user)
+		except CV.DoesNotExist:
+			return Response(
+				{'detail': 'CV nerastas.'},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+		return Response(CVDetailSerializer(cv).data)
+
+
 class CompanyViewSet(viewsets.ModelViewSet):
 	queryset = Company.objects.all().order_by('-created_at')
 	serializer_class = CompanySerializer
@@ -124,10 +213,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 	def get_queryset(self):
 		queryset = JobPosting.objects.all().order_by('-created_at')
 
-		if (
-			self.request.user.is_authenticated
-			and self.request.user.role == User.Role.EMPLOYER
-		):
+		if self.request.user.is_authenticated and self.request.user.role == User.Role.EMPLOYER:
 			return queryset.filter(company__owner=self.request.user)
 
 		return queryset.filter(status=JobPosting.Status.OPEN)

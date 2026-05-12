@@ -13,7 +13,18 @@ def get_csv_env(name, default=''):
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 PERSONAL_CODE_PEPPER = os.environ.get('PERSONAL_CODE_PEPPER', SECRET_KEY)
 
+MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'civis-cvs')
+MINIO_USE_SSL = os.environ.get('MINIO_USE_SSL', 'false').lower() == 'true'
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 ALLOWED_HOSTS = ['*']
 

@@ -16,7 +16,15 @@ from .models import (
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-	list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'date_of_birth', 'is_staff')
+	list_display = (
+		'username',
+		'email',
+		'first_name',
+		'last_name',
+		'role',
+		'date_of_birth',
+		'is_staff',
+	)
 	list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
 	search_fields = ('username', 'email', 'first_name', 'last_name')
 	ordering = ('-date_joined',)

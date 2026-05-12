@@ -10,6 +10,18 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
   backend:
     build: ./backend
     command: python manage.py runserver 0.0.0.0:8000
@@ -17,12 +29,11 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgres://civis:civis@db:5432/civis
-      DEBUG: "true"
-      CSRF_TRUSTED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    env_file:
+      - ./backend/.env
     depends_on:
       - db
+      - minio
 
   frontend:
     build: ./frontend
@@ -39,3 +50,4 @@ services:
 
 volumes:
   pgdata:
+  miniodata:
