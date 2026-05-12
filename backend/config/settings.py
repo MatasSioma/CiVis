@@ -12,16 +12,13 @@ def get_csv_env(name, default=''):
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 PERSONAL_CODE_PEPPER = os.environ.get('PERSONAL_CODE_PEPPER', SECRET_KEY)
-# Env var is OPEN_API_KEY (note: misspelled in .env) — normalize on the Python side.
-OPENAI_API_KEY = os.environ.get('OPEN_API_KEY', '')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY') or os.environ.get('OPEN_API_KEY', '')
 
 MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
 MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
 MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'civis-cvs')
 MINIO_USE_SSL = os.environ.get('MINIO_USE_SSL', 'false').lower() == 'true'
-
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')

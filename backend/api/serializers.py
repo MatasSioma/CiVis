@@ -274,28 +274,29 @@ class JobPostingSerializer(serializers.ModelSerializer):
 
 		return attrs
 
+	@staticmethod
+	def _embed_text(name: str, skill_type: str, description: str) -> str:
+		type_label = SkillType(skill_type).label
+		desc = (description or '').strip()
+		if desc:
+			return f'{name} — {type_label}: {desc}'
+		return f'{name} — {type_label}'
+
 	def _prepare_skill_rows(self, skills_payload):
-		"""Returns list of dicts with embedding-ready text."""
 		prepared = []
 
 		for entry in skills_payload:
 			name = entry['name']
 			skill_type = entry.get('type', SkillType.HARD)
-			description = (entry.get('description') or '').strip()
-			type_label = SkillType(skill_type).label
-
-			if description:
-				embed_text = f'{name} — {type_label}: {description}'
-			else:
-				embed_text = f'{name} — {type_label}'
+			description = entry.get('description', '')
 
 			prepared.append(
 				{
 					'name': name,
 					'type': skill_type,
-					'description': entry.get('description', ''),
+					'description': description,
 					'is_required': entry.get('is_required', False),
-					'embed_text': embed_text,
+					'embed_text': self._embed_text(name, skill_type, description),
 				}
 			)
 
@@ -335,18 +336,37 @@ class JobPostingSerializer(serializers.ModelSerializer):
 
 	def update(self, instance, validated_data):
 		skills_payload = validated_data.pop('skills', None)
-		embeddings = None
 		prepared = None
+		embeddings = None
 
 		if skills_payload is not None:
 			prepared = self._prepare_skill_rows(skills_payload)
 
-			try:
-				embeddings = generate_embeddings([r['embed_text'] for r in prepared])
-			except EmbeddingError as exc:
-				raise serializers.ValidationError(
-					{'skills': f'Nepavyko sugeneruoti embeddingų: {exc}'}
-				)
+			# Build a cache from embed_text -> existing embedding so unchanged
+			# skills don't require a new OpenAI call.
+			existing_cache = {
+				self._embed_text(s.name, s.type, s.description): s.embedding
+				for s in instance.jobpostingskill_set.all()
+				if s.embedding is not None
+			}
+
+			new_texts = [r['embed_text'] for r in prepared if r['embed_text'] not in existing_cache]
+
+			if new_texts:
+				try:
+					new_vectors = generate_embeddings(new_texts)
+				except EmbeddingError as exc:
+					raise serializers.ValidationError(
+						{'skills': f'Nepavyko sugeneruoti embeddingų: {exc}'}
+					)
+				new_embedding_map = dict(zip(new_texts, new_vectors))
+			else:
+				new_embedding_map = {}
+
+			embeddings = [
+				existing_cache[r['embed_text']] if r['embed_text'] in existing_cache else new_embedding_map.get(r['embed_text'])
+				for r in prepared
+			]
 
 		with transaction.atomic():
 			for field, value in validated_data.items():
