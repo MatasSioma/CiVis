@@ -12,9 +12,29 @@ export interface Company {
   owner: string;
   name: string;
   description: string;
+  registration_code: string;
+  address: string;
+  contact_email: string;
+  contact_phone: string;
+  website: string;
+  date_established: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export type CompanyUpdatePayload = Partial<
+  Pick<
+    Company,
+    | 'name'
+    | 'description'
+    | 'registration_code'
+    | 'address'
+    | 'contact_email'
+    | 'contact_phone'
+    | 'website'
+    | 'date_established'
+  >
+>;
 
 export interface Industry {
   id: string;
@@ -109,7 +129,7 @@ export const companyApi = {
     const results = isPaginated<Company>(data) ? data.results : data;
     return results[0] ?? null;
   },
-  update: (id: string, payload: Partial<Pick<Company, 'name' | 'description'>>) =>
+  update: (id: string, payload: CompanyUpdatePayload) =>
     apiRequest<Company>(`/companies/${id}/`, {
       method: 'PATCH',
       body: payload,

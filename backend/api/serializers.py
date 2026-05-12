@@ -125,10 +125,35 @@ class LoginSerializer(serializers.Serializer):
 
 
 class CompanySerializer(serializers.ModelSerializer):
+	registration_code = serializers.CharField(
+		max_length=20, allow_blank=False, required=False
+	)
+
 	class Meta:
 		model = Company
-		fields = ['id', 'owner', 'name', 'description', 'created_at', 'updated_at']
+		fields = [
+			'id',
+			'owner',
+			'name',
+			'description',
+			'registration_code',
+			'address',
+			'contact_email',
+			'contact_phone',
+			'website',
+			'date_established',
+			'created_at',
+			'updated_at',
+		]
 		read_only_fields = ['id', 'owner', 'created_at', 'updated_at']
+
+	def validate_registration_code(self, value):
+		value = value.strip()
+
+		if not value:
+			raise serializers.ValidationError('Įmonės kodas yra privalomas.')
+
+		return value
 
 
 class IndustrySerializer(serializers.ModelSerializer):
