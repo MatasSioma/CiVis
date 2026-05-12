@@ -41,7 +41,7 @@ class Company(models.Model):
 	owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='companies')
 	name = models.CharField(max_length=255)
 	description = models.TextField()
-	registration_code = models.CharField(max_length=20, blank=True, default='')
+	registration_code = models.CharField(max_length=9, blank=True, default='')
 	address = models.CharField(max_length=255, blank=True, default='')
 	contact_email = models.EmailField(blank=True, default='')
 	contact_phone = models.CharField(max_length=32, blank=True, default='')

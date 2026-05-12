@@ -70,6 +70,14 @@ export interface JobPostingSkillInput {
   is_required: boolean;
 }
 
+export type JobPostingOrdering =
+  | '-created_at'
+  | 'created_at'
+  | 'title'
+  | '-title'
+  | '-applicant_count'
+  | 'applicant_count';
+
 export interface JobPostingListItem {
   id: string;
   title: string;
@@ -81,6 +89,7 @@ export interface JobPostingListItem {
   location: string | null;
   salary_min: number | null;
   salary_max: number | null;
+  applicant_count: number;
   created_at: string;
 }
 
@@ -156,8 +165,24 @@ export const skillApi = {
 };
 
 export const jobPostingApi = {
-  list: (page = 1) =>
-    apiRequest<Paginated<JobPostingListItem>>(`/job-postings/?page=${page}`),
+  list: (
+    page = 1,
+    ordering: JobPostingOrdering = '-created_at',
+    search = '',
+  ) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      ordering,
+    });
+
+    if (search.trim()) {
+      params.set('search', search.trim());
+    }
+
+    return apiRequest<Paginated<JobPostingListItem>>(
+      `/job-postings/?${params.toString()}`,
+    );
+  },
   get: (id: string) => apiRequest<JobPostingDetail>(`/job-postings/${id}/`),
   create: (payload: JobPostingPayload) =>
     apiRequest<JobPostingDetail>('/job-postings/', {
@@ -203,3 +228,14 @@ export const WORKPLACE_TYPE_LABELS: Record<WorkplaceType, string> = {
   on_site: 'Vietoje',
   remote: 'Nuotolinis',
 };
+
+export const JOB_POSTING_ORDERING_OPTIONS: {
+  value: JobPostingOrdering;
+  label: string;
+}[] = [
+  { value: '-created_at', label: 'Pagal įkėlimo datą (naujausios viršuje)' },
+  { value: '-applicant_count', label: 'Pagal aplikantų skaičių (daugiausiai)' },
+  { value: 'title', label: 'Pagal pavadinimą (A–Z)' },
+];
+
+export const DEFAULT_JOB_POSTING_ORDERING: JobPostingOrdering = '-created_at';

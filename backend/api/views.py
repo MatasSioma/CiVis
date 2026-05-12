@@ -1,10 +1,12 @@
 from django.contrib.auth import login, logout
 from django.db import transaction
+from django.db.models import Count
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -145,8 +147,12 @@ class CVViewSet(viewsets.ModelViewSet):
 
 
 class JobPostingViewSet(viewsets.ModelViewSet):
-	queryset = JobPosting.objects.all().order_by('-created_at')
+	queryset = JobPosting.objects.all()
 	permission_classes = [IsEmployerForWrite]
+	filter_backends = [SearchFilter, OrderingFilter]
+	search_fields = ['title']
+	ordering_fields = ['created_at', 'title', 'applicant_count']
+	ordering = ['-created_at']
 
 	def get_serializer_class(self):
 		if self.action == 'list':
@@ -155,7 +161,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 		return JobPostingSerializer
 
 	def get_queryset(self):
-		queryset = JobPosting.objects.all().order_by('-created_at')
+		queryset = JobPosting.objects.all()
 
 		if (
 			self.request.user.is_authenticated
@@ -170,7 +176,9 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 				'jobpostingskill_set'
 			)
 		elif self.action == 'list':
-			queryset = queryset.select_related('industry')
+			queryset = queryset.select_related('industry').annotate(
+				applicant_count=Count('applications')
+			)
 
 		return queryset
 

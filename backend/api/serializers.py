@@ -126,7 +126,7 @@ class LoginSerializer(serializers.Serializer):
 
 class CompanySerializer(serializers.ModelSerializer):
 	registration_code = serializers.CharField(
-		max_length=20, allow_blank=False, required=False
+		max_length=9, allow_blank=False, required=False
 	)
 
 	class Meta:
@@ -202,6 +202,7 @@ class JobPostingSkillReadSerializer(serializers.ModelSerializer):
 
 class JobPostingListSerializer(serializers.ModelSerializer):
 	industry_name = serializers.CharField(source='industry.name', read_only=True)
+	applicant_count = serializers.IntegerField(read_only=True, default=0)
 
 	class Meta:
 		model = JobPosting
@@ -216,6 +217,7 @@ class JobPostingListSerializer(serializers.ModelSerializer):
 			'location',
 			'salary_min',
 			'salary_max',
+			'applicant_count',
 			'created_at',
 		]
 		read_only_fields = fields

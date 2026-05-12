@@ -1,21 +1,46 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { getRoleLabel, useAuth } from '@/stores/auth';
 import { useToasts } from '@/stores/toasts';
 import {
   companyApi,
   jobPostingApi,
+  JOB_POSTING_ORDERING_OPTIONS,
   JOB_STATUS_LABELS,
   JOB_TYPE_LABELS,
+  DEFAULT_JOB_POSTING_ORDERING,
   type Company,
   type JobPostingListItem,
+  type JobPostingOrdering,
   type Paginated,
 } from '@/services/employer';
 const { state } = useAuth();
+const route = useRoute();
 const router = useRouter();
 const { showToast } = useToasts();
+
+const PAGE_SIZE = 10;
+const ALLOWED_ORDERINGS = JOB_POSTING_ORDERING_OPTIONS.map((o) => o.value);
+
+function parsePage(raw: unknown): number {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
+}
+
+function parseOrdering(raw: unknown): JobPostingOrdering {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return ALLOWED_ORDERINGS.includes(value as JobPostingOrdering)
+    ? (value as JobPostingOrdering)
+    : DEFAULT_JOB_POSTING_ORDERING;
+}
+
+function parseSearch(raw: unknown): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === 'string' ? value : '';
+}
 
 const user = computed(() => state.user);
 
@@ -60,7 +85,7 @@ const totalPages = computed(() => {
     return 1;
   }
 
-  return Math.ceil(postingsTotal.value / 10);
+  return Math.ceil(postingsTotal.value / PAGE_SIZE);
 });
 
 async function loadCompany() {
@@ -79,16 +104,31 @@ async function loadCompany() {
   }
 }
 
-async function loadPostings(page: number) {
+const postingsOrdering = ref<JobPostingOrdering>(DEFAULT_JOB_POSTING_ORDERING);
+const postingsSearch = ref('');
+const searchInput = ref('');
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+async function loadPostings(
+  page: number,
+  ordering: JobPostingOrdering,
+  search: string,
+) {
   isPostingsLoading.value = true;
 
   try {
-    const data: Paginated<JobPostingListItem> = await jobPostingApi.list(page);
+    const data: Paginated<JobPostingListItem> = await jobPostingApi.list(
+      page,
+      ordering,
+      search,
+    );
     postings.value = data.results;
     postingsTotal.value = data.count;
     postingsNext.value = data.next;
     postingsPrevious.value = data.previous;
     postingsPage.value = page;
+    postingsOrdering.value = ordering;
+    postingsSearch.value = search;
   } catch {
     showToast('Nepavyko įkelti skelbimų.', 'error');
   } finally {
@@ -113,18 +153,59 @@ function cancelEditCompany() {
   isEditingCompany.value = false;
 }
 
+const REGISTRATION_CODE_MAX = 9;
+// Mirrors Django's EmailValidator pragmatic pattern (local@domain.tld, no whitespace).
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    // Django's URLValidator accepts http(s) and ftp(s) schemes.
+    return ['http:', 'https:', 'ftp:', 'ftps:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function validateCompanyForm(): string {
+  if (!companyForm.name.trim()) {
+    return 'Įveskite įmonės pavadinimą.';
+  }
+
+  const code = companyForm.registration_code.trim();
+
+  if (!code) {
+    return 'Įveskite įmonės kodą.';
+  }
+
+  if (code.length > REGISTRATION_CODE_MAX) {
+    return `Įmonės kodas negali būti ilgesnis nei ${REGISTRATION_CODE_MAX} simboliai.`;
+  }
+
+  const email = companyForm.contact_email.trim();
+
+  if (email && !EMAIL_REGEX.test(email)) {
+    return 'Įveskite teisingą el. pašto adresą.';
+  }
+
+  const website = companyForm.website.trim();
+
+  if (website && !isValidUrl(website)) {
+    return 'Įveskite teisingą svetainės nuorodą (pvz. https://...).';
+  }
+
+  return '';
+}
+
 async function saveCompany() {
   if (!company.value) {
     return;
   }
 
-  if (!companyForm.name.trim()) {
-    showToast('Įveskite įmonės pavadinimą.', 'error');
-    return;
-  }
+  const validationError = validateCompanyForm();
 
-  if (!companyForm.registration_code.trim()) {
-    showToast('Įveskite įmonės kodą.', 'error');
+  if (validationError) {
+    showToast(validationError, 'error');
     return;
   }
 
@@ -168,7 +249,11 @@ async function clonePosting(id: string) {
   try {
     await jobPostingApi.clone(id);
     showToast('Skelbimas nukopijuotas kaip juodraštis.', 'success');
-    await loadPostings(postingsPage.value);
+    await loadPostings(
+      postingsPage.value,
+      postingsOrdering.value,
+      postingsSearch.value,
+    );
   } catch {
     showToast('Nepavyko nukopijuoti skelbimo.', 'error');
   } finally {
@@ -188,17 +273,85 @@ async function deletePosting(id: string, title: string) {
     showToast('Skelbimas ištrintas.', 'success');
 
     const remainingOnPage = postings.value.length - 1;
-    const targetPage =
-      remainingOnPage === 0 && postingsPage.value > 1
-        ? postingsPage.value - 1
-        : postingsPage.value;
-    await loadPostings(targetPage);
+
+    if (remainingOnPage === 0 && postingsPage.value > 1) {
+      await goToPage(postingsPage.value - 1);
+    } else {
+      await loadPostings(
+        postingsPage.value,
+        postingsOrdering.value,
+        postingsSearch.value,
+      );
+    }
   } catch {
     showToast('Nepavyko ištrinti skelbimo.', 'error');
   } finally {
     deletingId.value = null;
   }
 }
+
+async function goToPage(page: number) {
+  const target = page >= 1 ? page : 1;
+  const nextQuery = { ...route.query };
+
+  if (target === 1) {
+    delete nextQuery.page;
+  } else {
+    nextQuery.page = String(target);
+  }
+
+  await router.push({ query: nextQuery });
+}
+
+async function setOrdering(ordering: JobPostingOrdering) {
+  const nextQuery = { ...route.query };
+  delete nextQuery.page;
+
+  if (ordering === DEFAULT_JOB_POSTING_ORDERING) {
+    delete nextQuery.ordering;
+  } else {
+    nextQuery.ordering = ordering;
+  }
+
+  await router.push({ query: nextQuery });
+}
+
+async function setSearch(search: string) {
+  const trimmed = search.trim();
+  const nextQuery = { ...route.query };
+  delete nextQuery.page;
+
+  if (trimmed) {
+    nextQuery.search = trimmed;
+  } else {
+    delete nextQuery.search;
+  }
+
+  await router.push({ query: nextQuery });
+}
+
+function onSearchInput(value: string) {
+  searchInput.value = value;
+
+  if (searchDebounce) {
+    clearTimeout(searchDebounce);
+  }
+
+  searchDebounce = setTimeout(() => {
+    void setSearch(value);
+  }, 300);
+}
+
+watch(
+  () => [route.query.page, route.query.ordering, route.query.search],
+  () => {
+    void loadPostings(
+      parsePage(route.query.page),
+      parseOrdering(route.query.ordering),
+      parseSearch(route.query.search),
+    );
+  },
+);
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('lt-LT');
@@ -222,7 +375,12 @@ function formatSalary(min: number | null, max: number | null) {
 
 onMounted(() => {
   void loadCompany();
-  void loadPostings(1);
+  searchInput.value = parseSearch(route.query.search);
+  void loadPostings(
+    parsePage(route.query.page),
+    parseOrdering(route.query.ordering),
+    parseSearch(route.query.search),
+  );
 });
 </script>
 
@@ -247,7 +405,7 @@ onMounted(() => {
           Naudotojo informacija
         </span>
         <span
-          class="text-xs font-semibold text-gray-500 transition"
+          class="text-s font-semibold text-gray-500 transition"
           :class="{ 'rotate-180': isUserInfoExpanded }">
           ▾
         </span>
@@ -376,6 +534,7 @@ onMounted(() => {
           <input
             v-model="companyForm.registration_code"
             class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            maxlength="9"
             placeholder="Pvz. 123456789"
             required
             type="text" />
@@ -448,7 +607,7 @@ onMounted(() => {
     </article>
 
     <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-      <div class="flex items-start justify-between gap-3">
+      <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
             Darbo skelbimai
@@ -460,13 +619,35 @@ onMounted(() => {
             </span>
           </h2>
         </div>
-        <button
-          v-if="postings.length > 0"
-          class="rounded-md bg-attention px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-secondary"
-          type="button"
-          @click="goToNewPosting">
-          Naujas skelbimas
-        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            :value="searchInput"
+            class="h-9 w-56 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Ieškoti pagal pavadinimą"
+            type="search"
+            @input="onSearchInput(($event.target as HTMLInputElement).value)" />
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <span class="text-xs font-medium text-gray-600">Rikiuoti:</span>
+            <select
+              :value="postingsOrdering"
+              class="h-9 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-950 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+              @change="setOrdering(($event.target as HTMLSelectElement).value as JobPostingOrdering)">
+              <option
+                v-for="opt in JOB_POSTING_ORDERING_OPTIONS"
+                :key="opt.value"
+                :value="opt.value">
+                {{ opt.label }}
+              </option>
+            </select>
+          </label>
+          <button
+            v-if="postings.length > 0"
+            class="rounded-md bg-attention px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-secondary"
+            type="button"
+            @click="goToNewPosting">
+            Naujas skelbimas
+          </button>
+        </div>
       </div>
 
       <p v-if="isPostingsLoading" class="mt-3 text-sm text-gray-600">Kraunama...</p>
@@ -474,8 +655,12 @@ onMounted(() => {
       <div
         v-else-if="postings.length === 0"
         class="mt-4 flex flex-col items-center gap-3 rounded-md border border-dashed border-gray-300 bg-background/40 px-4 py-8 text-center">
-        <p class="text-sm text-gray-700">Skelbimų kol kas nėra.</p>
+        <p v-if="postingsSearch" class="text-sm text-gray-700">
+          Pagal „{{ postingsSearch }}“ skelbimų nerasta.
+        </p>
+        <p v-else class="text-sm text-gray-700">Skelbimų kol kas nėra.</p>
         <button
+          v-if="!postingsSearch"
           class="rounded-md bg-attention px-4 py-2 text-sm font-semibold text-white transition hover:bg-secondary"
           type="button"
           @click="goToNewPosting">
@@ -492,6 +677,7 @@ onMounted(() => {
               <th class="py-2 pr-3 font-semibold">Tipas</th>
               <th class="py-2 pr-3 font-semibold">Būsena</th>
               <th class="py-2 pr-3 font-semibold">Atlyginimas</th>
+              <th class="py-2 pr-3 font-semibold">Aplikantai</th>
               <th class="py-2 pr-3 font-semibold">Sukurta</th>
               <th class="py-2 font-semibold text-right">Veiksmai</th>
             </tr>
@@ -521,9 +707,16 @@ onMounted(() => {
               <td class="py-3 pr-3 text-gray-700">
                 {{ formatSalary(posting.salary_min, posting.salary_max) }}
               </td>
+              <td class="py-3 pr-3 text-gray-700">{{ posting.applicant_count }}</td>
               <td class="py-3 pr-3 text-gray-700">{{ formatDate(posting.created_at) }}</td>
               <td class="py-3 text-right">
                 <div class="flex justify-end gap-2">
+                  <button
+                    class="rounded-md bg-attention px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-secondary"
+                    type="button"
+                    @click.stop="openPosting(posting.id)">
+                    Redaguoti
+                  </button>
                   <button
                     class="rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-attention transition hover:bg-secondary disabled:opacity-50"
                     :disabled="cloningId === posting.id"
@@ -549,7 +742,7 @@ onMounted(() => {
             class="rounded-md bg-gray-100 px-3 py-1.5 font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
             :disabled="!postingsPrevious"
             type="button"
-            @click="loadPostings(postingsPage - 1)">
+            @click="goToPage(postingsPage - 1)">
             ← Atgal
           </button>
           <span class="text-gray-600">
@@ -559,7 +752,7 @@ onMounted(() => {
             class="rounded-md bg-gray-100 px-3 py-1.5 font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
             :disabled="!postingsNext"
             type="button"
-            @click="loadPostings(postingsPage + 1)">
+            @click="goToPage(postingsPage + 1)">
             Pirmyn →
           </button>
         </div>
