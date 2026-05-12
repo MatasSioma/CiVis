@@ -7,15 +7,17 @@ TABLE users {
   id uuid [pk, default: `gen_random_uuid()`]
   username varchar(255) [not null, unique]
   email citext [not null, unique, note: 'case-insensitive email']
-  personal_code_hash varchar(64) [unique, note: 'HMAC-SHA256 of normalized personal code; plaintext is never stored']
+  personal_code_hash varchar(64) [note: 'HMAC-SHA256 of normalized personal code; plaintext is never stored']
   password varchar(255) [not null]
   role varchar(64) [not null, note: 'CHECK: job_seeker, employer']
+  date_of_birth date
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
   indexes {
     personal_code_hash
     role
+    (personal_code_hash, role) [unique, name: 'unique_personal_code_per_role']
   }
 }
 
@@ -42,7 +44,6 @@ TABLE cvs {
   id uuid [pk, default: `gen_random_uuid()`]
   user uuid [not null, ref: > users.id]
   file_key varchar(512) [not null, note: 'S3 object key; signed URLs generated at read time']
-  embedding vector(1536)
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
@@ -62,7 +63,6 @@ TABLE job_postings {
   salary_max integer
   job_type varchar(32) [not null, note: 'CHECK: full_time, part_time, contract, internship, temporary']
   status varchar(16) [not null, default: 'open', note: 'CHECK: draft, open, closed']
-  embedding vector(1536)
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 
@@ -74,7 +74,6 @@ TABLE job_postings {
     status
     (salary_min, salary_max) [name: 'idx_salary_range']
     created_at
-    embedding [type: hnsw, note: 'vector similarity search']
   }
 }
 
@@ -103,19 +102,30 @@ TABLE skills {
 }
 
 TABLE cv_skills {
-  cv_id uuid [ref: > cvs.id]
-  skill_id uuid [ref: > skills.id]
+  id integer [pk, increment]
+  cv_id uuid [not null, ref: > cvs.id]
+  skill_id uuid [not null, ref: > skills.id]
+  type varchar(16) [not null, default: 'hard', note: 'CHECK: hard, soft, experience']
+  description text
+  embedding vector(1536)
 
   indexes {
-    (cv_id, skill_id) [pk]
+    (cv_id, skill_id) [unique, name: 'cv_skill_unique']
+    embedding [type: hnsw, note: 'vector_cosine_ops']
   }
 }
 
 TABLE job_posting_skills {
-  job_posting_id uuid [ref: > job_postings.id]
-  skill_id uuid [ref: > skills.id]
+  id integer [pk, increment]
+  job_posting_id uuid [not null, ref: > job_postings.id]
+  skill_id uuid [not null, ref: > skills.id]
+  type varchar(16) [not null, default: 'hard', note: 'CHECK: hard, soft, experience']
+  description text
+  is_required boolean [not null, default: false]
+  embedding vector(1536)
 
   indexes {
-    (job_posting_id, skill_id) [pk]
+    (job_posting_id, skill_id) [unique, name: 'job_posting_skill_unique']
+    embedding [type: hnsw, note: 'vector_cosine_ops']
   }
 }
