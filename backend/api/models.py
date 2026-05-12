@@ -11,13 +11,19 @@ class User(AbstractUser):
 		EMPLOYER = 'employer', 'Employer'
 
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-	email = models.EmailField(unique=True)
-	personal_code_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+	email = models.EmailField()
+	personal_code_hash = models.CharField(max_length=64, null=True, blank=True)
 	role = models.CharField(max_length=64, choices=Role.choices)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
+		constraints = [
+			models.UniqueConstraint(
+				fields=['personal_code_hash', 'role'],
+				name='unique_personal_code_per_role',
+			),
+		]
 		indexes = [
 			models.Index(
 				fields=['personal_code_hash'], name='api_user_person_3d4420_idx'

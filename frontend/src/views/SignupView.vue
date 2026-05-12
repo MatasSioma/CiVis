@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ApiError } from '@/services/api';
-import { dashboardRouteName, useAuth } from '@/stores/auth';
+import BrandLogo from '@/components/BrandLogo.vue';
+import { ROUTE_NAMES } from '@/router/enums/routeNames';
+import { useGateway, type GatewaySignupPayload } from '@/stores/gateway';
 import { useToasts } from '@/stores/toasts';
 import type { UserRole } from '@/shared/types';
 
 const router = useRouter();
 const route = useRoute();
-const auth = useAuth();
+const gateway = useGateway();
 const { showToast } = useToasts();
 
 function getInitialRole(): UserRole {
@@ -19,12 +20,9 @@ function getInitialRole(): UserRole {
 
 const form = reactive({
   role: getInitialRole(),
-  personal_code: '',
   email: '',
   first_name: '',
   last_name: '',
-  password: '',
-  password_confirm: '',
   company_name: '',
   company_description: '',
 });
@@ -35,22 +33,17 @@ const roleOptions: { label: string; value: UserRole }[] = [
   { label: 'Darbdavys', value: 'employer' },
 ];
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiError && error.details) {
-    const details = error.details as Record<string, string[] | string>;
-    const firstValue = Object.values(details)[0];
-
-    if (Array.isArray(firstValue)) {
-      return firstValue[0] ?? 'Registracija nepavyko.';
-    }
-
-    if (typeof firstValue === 'string') {
-      return firstValue;
-    }
+onMounted(() => {
+  if (gateway.state.flow === 'signup' && gateway.state.payload) {
+    const payload = gateway.state.payload as GatewaySignupPayload;
+    form.role = payload.role;
+    form.email = payload.email ?? '';
+    form.first_name = payload.first_name ?? '';
+    form.last_name = payload.last_name ?? '';
+    form.company_name = payload.company_name ?? '';
+    form.company_description = payload.company_description ?? '';
   }
-
-  return 'Registracija nepavyko.';
-}
+});
 
 function validateSignup() {
   if (!form.role) {
@@ -61,24 +54,8 @@ function validateSignup() {
     return 'Įveskite vardą.';
   }
 
-  if (!form.personal_code.trim()) {
-    return 'Įveskite asmens kodą.';
-  }
-
-  if (!/^\d{11}$/.test(form.personal_code.trim())) {
-    return 'Asmens kodą turi sudaryti 11 skaitmenų.';
-  }
-
   if (!form.email.trim()) {
     return 'Įveskite el. pašto adresą.';
-  }
-
-  if (!form.password) {
-    return 'Slaptažodis negali būti tuščias.';
-  }
-
-  if (form.password !== form.password_confirm) {
-    return 'Slaptažodžiai nesutampa.';
   }
 
   if (form.role === 'employer' && !form.company_name.trim()) {
@@ -88,7 +65,7 @@ function validateSignup() {
   return '';
 }
 
-async function submitSignup() {
+async function continueToGateway() {
   errorMessage.value = '';
 
   const validationError = validateSignup();
@@ -99,44 +76,41 @@ async function submitSignup() {
     return;
   }
 
-  try {
-    const user = await auth.signup({
-      role: form.role,
-      personal_code: form.personal_code,
-      email: form.email,
-      first_name: form.first_name,
-      last_name: form.last_name,
-      password: form.password,
-      company_name: form.role === 'employer' ? form.company_name : undefined,
-      company_description:
-        form.role === 'employer' ? form.company_description : undefined,
-    });
+  gateway.start('signup', {
+    role: form.role,
+    email: form.email.trim(),
+    first_name: form.first_name.trim(),
+    last_name: form.last_name.trim(),
+    company_name:
+      form.role === 'employer' ? form.company_name.trim() : undefined,
+    company_description:
+      form.role === 'employer' ? form.company_description.trim() : undefined,
+  });
 
-    if (!user) {
-      errorMessage.value = 'Sesija nesukurta.';
-      return;
-    }
-
-    showToast('Registracija sėkminga.', 'success');
-    await router.push({ name: dashboardRouteName(user.role) });
-  } catch (error) {
-    errorMessage.value = getErrorMessage(error);
-    showToast('Registracija nepavyko. Patikrinkite įvestus duomenis.', 'error');
-  }
+  await router.push({ name: ROUTE_NAMES.GATEWAY });
 }
 </script>
 
 <template>
   <form
     class="w-full max-w-[800px] rounded-lg border border-white/70 bg-white p-5 shadow-lg sm:p-6"
-    @submit.prevent="submitSignup">
+    @submit.prevent="continueToGateway">
     <div class="mb-4">
-      <p class="text-xs font-semibold uppercase tracking-wide text-secondary">
+      <RouterLink
+        :to="{ name: ROUTE_NAMES.HOME }"
+        aria-label="Į pradžios puslapį"
+        class="inline-block">
+        <BrandLogo />
+      </RouterLink>
+      <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-secondary">
         CiVis paskyra
       </p>
       <h1 class="mt-1 text-2xl font-bold leading-tight text-gray-950">
         Registracija
       </h1>
+      <p class="mt-1 text-sm text-gray-600">
+        Užpildykite duomenis, slaptažodį ir asmens kodą įvesite Semėno vartuose.
+      </p>
     </div>
 
     <div class="mb-4 grid grid-cols-2 gap-1 rounded-lg border border-primary bg-background p-1">
@@ -181,20 +155,7 @@ async function submitSignup() {
             type="text" />
         </label>
 
-        <label class="block">
-          <span class="text-sm font-medium text-gray-700">Asmens kodas</span>
-          <input
-            v-model="form.personal_code"
-            autocomplete="username"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
-            inputmode="numeric"
-            maxlength="11"
-            placeholder="Įveskite 11 skaitmenų asmens kodą"
-            required
-            type="text" />
-        </label>
-
-        <label class="block">
+        <label class="block md:col-span-2">
           <span class="text-sm font-medium text-gray-700">El. paštas</span>
           <input
             v-model="form.email"
@@ -203,36 +164,6 @@ async function submitSignup() {
             placeholder="vardas@pastas.lt"
             required
             type="email" />
-        </label>
-      </div>
-    </section>
-
-    <section class="mt-4">
-      <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-        Prisijungimo duomenys
-      </p>
-
-      <div class="grid gap-3 md:grid-cols-2">
-        <label class="block">
-          <span class="text-sm font-medium text-gray-700">Slaptažodis</span>
-          <input
-            v-model="form.password"
-            autocomplete="new-password"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
-            placeholder="Įveskite slaptažodį"
-            required
-            type="password" />
-        </label>
-
-        <label class="block">
-          <span class="text-sm font-medium text-gray-700">Pakartoti slaptažodį</span>
-          <input
-            v-model="form.password_confirm"
-            autocomplete="new-password"
-            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
-            placeholder="Pakartokite slaptažodį"
-            required
-            type="password" />
         </label>
       </div>
     </section>
@@ -270,10 +201,9 @@ async function submitSignup() {
     </p>
 
     <button
-      class="mt-4 h-11 w-full rounded-md bg-attention px-4 font-semibold text-white transition hover:bg-secondary disabled:cursor-not-allowed disabled:bg-gray-300"
-      :disabled="auth.state.isLoading"
+      class="mt-4 h-11 w-full rounded-md bg-attention px-4 font-semibold text-white transition hover:bg-secondary"
       type="submit">
-      {{ auth.state.isLoading ? 'Kuriama...' : 'Sukurti paskyrą' }}
+      Tęsti į Semėno vartus
     </button>
 
     <p class="mt-3 text-center text-sm text-gray-600">

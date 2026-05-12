@@ -15,4 +15,10 @@ export const authLayoutRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/SignupView.vue'),
     meta: { guestOnly: true },
   },
+  {
+    path: ROUTE_PATHS.GATEWAY,
+    name: ROUTE_NAMES.GATEWAY,
+    component: () => import('@/views/GatewayView.vue'),
+    meta: { guestOnly: true },
+  },
 ];

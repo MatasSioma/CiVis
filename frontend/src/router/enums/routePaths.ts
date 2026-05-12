@@ -7,6 +7,7 @@ export const ROUTE_PATHS = {
   EMPLOYER_DASHBOARD: 'employer',
   LOGIN: 'login',
   SIGNUP: 'signup',
+  GATEWAY: 'gateway',
 } as const;
 
 export type RoutePathsValues = ObjectValues<typeof ROUTE_PATHS>;

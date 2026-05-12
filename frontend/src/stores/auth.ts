@@ -23,6 +23,7 @@ const STORAGE_KEYS = [
   'civis.role',
   'civis.token',
   'civis.session',
+  'civis.gateway',
 ];
 
 export const ROLE_LABELS: Record<UserRole, string> = {

@@ -32,22 +32,17 @@ class SignupSerializer(serializers.Serializer):
 	company_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
 	company_description = serializers.CharField(required=False, allow_blank=True)
 
-	def validate_personal_code(self, value):
-		personal_code_hash = make_personal_code_hash(value)
-
-		if User.objects.filter(personal_code_hash=personal_code_hash).exists():
-			raise serializers.ValidationError('Paskyra su siuo asmens kodu jau egzistuoja.')
-
-		return value
-
-	def validate_email(self, value):
-		if User.objects.filter(email__iexact=value).exists():
-			raise serializers.ValidationError('Paskyra su siuo el. pastu jau egzistuoja.')
-
-		return value.lower()
-
 	def validate(self, attrs):
 		password_validation.validate_password(attrs['password'])
+
+		personal_code_hash = make_personal_code_hash(attrs['personal_code'])
+
+		if User.objects.filter(
+			personal_code_hash=personal_code_hash, role=attrs['role']
+		).exists():
+			raise serializers.ValidationError(
+				{'personal_code': 'Paskyra su siuo asmens kodu jau egzistuoja.'}
+			)
 
 		if attrs['role'] == User.Role.EMPLOYER and not attrs.get('company_name'):
 			raise serializers.ValidationError(
@@ -61,9 +56,10 @@ class SignupSerializer(serializers.Serializer):
 		company_name = validated_data.pop('company_name', '').strip()
 		company_description = validated_data.pop('company_description', '').strip()
 		password = validated_data.pop('password')
+		role = validated_data['role']
 
 		user = User(
-			username=personal_code_hash,
+			username=f'{role}:{personal_code_hash}',
 			personal_code_hash=personal_code_hash,
 			**validated_data,
 		)
@@ -87,18 +83,17 @@ class LoginSerializer(serializers.Serializer):
 
 	def validate(self, attrs):
 		personal_code_hash = make_personal_code_hash(attrs['personal_code'])
-		user = User.objects.filter(personal_code_hash=personal_code_hash).first()
+		user = User.objects.filter(
+			personal_code_hash=personal_code_hash, role=attrs['role']
+		).first()
 
 		if user is None:
-			raise serializers.ValidationError('Naudotojas su tokiu asmens kodu nerastas.')
+			raise serializers.ValidationError(
+				'Naudotojas su tokiu asmens kodu ir paskyros rūšimi nerastas.'
+			)
 
 		if not check_password(attrs['password'], user.password):
 			raise serializers.ValidationError('Neteisingas slaptažodis.')
-
-		if user.role != attrs['role']:
-			raise serializers.ValidationError(
-				'Šis naudotojas nepriklauso pasirinktai paskyros rūšiai.'
-			)
 
 		if not user.is_active:
 			raise serializers.ValidationError('Paskyra neaktyvi.')
