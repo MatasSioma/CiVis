@@ -23,6 +23,7 @@ const form = reactive({
   email: '',
   first_name: '',
   last_name: '',
+  date_of_birth: '',
   company_name: '',
   company_description: '',
 });
@@ -40,6 +41,7 @@ onMounted(() => {
     form.email = payload.email ?? '';
     form.first_name = payload.first_name ?? '';
     form.last_name = payload.last_name ?? '';
+    form.date_of_birth = payload.date_of_birth ?? '';
     form.company_name = payload.company_name ?? '';
     form.company_description = payload.company_description ?? '';
   }
@@ -54,8 +56,16 @@ function validateSignup() {
     return 'Įveskite vardą.';
   }
 
+  if (!form.last_name.trim()) {
+    return 'Įveskite pavardę.';
+  }
+
   if (!form.email.trim()) {
     return 'Įveskite el. pašto adresą.';
+  }
+
+  if (form.role === 'job_seeker' && !form.date_of_birth) {
+    return 'Nurodykite gimimo datą.';
   }
 
   if (form.role === 'employer' && !form.company_name.trim()) {
@@ -81,6 +91,8 @@ async function continueToGateway() {
     email: form.email.trim(),
     first_name: form.first_name.trim(),
     last_name: form.last_name.trim(),
+    date_of_birth:
+      form.role === 'job_seeker' ? form.date_of_birth : undefined,
     company_name:
       form.role === 'employer' ? form.company_name.trim() : undefined,
     company_description:
@@ -164,6 +176,16 @@ async function continueToGateway() {
             placeholder="vardas@pastas.lt"
             required
             type="email" />
+        </label>
+
+        <label v-if="form.role === 'job_seeker'" class="block md:col-span-2">
+          <span class="text-sm font-medium text-gray-700">Gimimo data</span>
+          <input
+            v-model="form.date_of_birth"
+            autocomplete="bday"
+            class="mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            required
+            type="date" />
         </label>
       </div>
     </section>

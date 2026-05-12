@@ -18,7 +18,16 @@ from .security import make_personal_code_hash
 class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
-		fields = ['id', 'email', 'first_name', 'last_name', 'role', 'created_at', 'updated_at']
+		fields = [
+			'id',
+			'email',
+			'first_name',
+			'last_name',
+			'role',
+			'date_of_birth',
+			'created_at',
+			'updated_at',
+		]
 		read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -26,9 +35,10 @@ class SignupSerializer(serializers.Serializer):
 	personal_code = serializers.CharField(write_only=True)
 	password = serializers.CharField(write_only=True, trim_whitespace=False)
 	email = serializers.EmailField()
-	first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
-	last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+	first_name = serializers.CharField(max_length=150)
+	last_name = serializers.CharField(max_length=150)
 	role = serializers.ChoiceField(choices=User.Role.choices)
+	date_of_birth = serializers.DateField(required=False, allow_null=True)
 	company_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
 	company_description = serializers.CharField(required=False, allow_blank=True)
 
@@ -44,6 +54,11 @@ class SignupSerializer(serializers.Serializer):
 				{'personal_code': 'Paskyra su siuo asmens kodu jau egzistuoja.'}
 			)
 
+		if attrs['role'] == User.Role.JOB_SEEKER and not attrs.get('date_of_birth'):
+			raise serializers.ValidationError(
+				{'date_of_birth': 'Darbo ieškantis asmuo turi nurodyti gimimo datą.'}
+			)
+
 		if attrs['role'] == User.Role.EMPLOYER and not attrs.get('company_name'):
 			raise serializers.ValidationError(
 				{'company_name': 'Darbdavio paskyrai reikalingas imones pavadinimas.'}
@@ -57,6 +72,9 @@ class SignupSerializer(serializers.Serializer):
 		company_description = validated_data.pop('company_description', '').strip()
 		password = validated_data.pop('password')
 		role = validated_data['role']
+
+		if role != User.Role.JOB_SEEKER:
+			validated_data.pop('date_of_birth', None)
 
 		user = User(
 			username=f'{role}:{personal_code_hash}',
@@ -179,10 +197,17 @@ class ApplicationSerializer(serializers.ModelSerializer):
 class CVSkillSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = CVSkill
-		fields = ['id', 'cv', 'skill']
+		fields = ['id', 'cv', 'skill', 'type', 'description']
 
 
 class JobPostingSkillSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = JobPostingSkill
-		fields = ['id', 'job_posting', 'skill']
+		fields = [
+			'id',
+			'job_posting',
+			'skill',
+			'type',
+			'description',
+			'is_required',
+		]

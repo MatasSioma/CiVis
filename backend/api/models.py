@@ -14,6 +14,7 @@ class User(AbstractUser):
 	email = models.EmailField()
 	personal_code_hash = models.CharField(max_length=64, null=True, blank=True)
 	role = models.CharField(max_length=64, choices=Role.choices)
+	date_of_birth = models.DateField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -76,7 +77,6 @@ class CV(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cv')
 	file_key = models.CharField(max_length=512)
-	embedding = VectorField(dimensions=1536, null=True, blank=True)
 	skills = models.ManyToManyField(Skill, through='CVSkill', related_name='cvs', blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
@@ -114,7 +114,6 @@ class JobPosting(models.Model):
 	salary_max = models.IntegerField(null=True, blank=True)
 	job_type = models.CharField(max_length=32, choices=JobType.choices)
 	status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
-	embedding = VectorField(dimensions=1536, null=True, blank=True)
 	skills = models.ManyToManyField(
 		Skill, through='JobPostingSkill', related_name='job_postings', blank=True
 	)
@@ -128,13 +127,6 @@ class JobPosting(models.Model):
 			models.Index(fields=['status']),
 			models.Index(fields=['salary_min', 'salary_max'], name='idx_salary_range'),
 			models.Index(fields=['created_at']),
-			HnswIndex(
-				name='idx_job_posting_embedding',
-				fields=['embedding'],
-				m=16,
-				ef_construction=64,
-				opclasses=['vector_cosine_ops'],
-			),
 		]
 
 	def __str__(self):
@@ -183,13 +175,31 @@ class Application(models.Model):
 		return f'{self.applicant} → {self.job_posting}'
 
 
+class SkillType(models.TextChoices):
+	HARD = 'hard', 'Hard skill'
+	SOFT = 'soft', 'Soft skill'
+	EXPERIENCE = 'experience', 'Experience'
+
+
 class CVSkill(models.Model):
 	cv = models.ForeignKey(CV, on_delete=models.CASCADE)
 	skill = models.ForeignKey(Skill, on_delete=models.CASCADE)
+	type = models.CharField(max_length=16, choices=SkillType.choices, default=SkillType.HARD)
+	description = models.TextField(blank=True)
+	embedding = VectorField(dimensions=1536, null=True, blank=True)
 
 	class Meta:
 		constraints = [
 			models.UniqueConstraint(fields=['cv', 'skill'], name='cv_skill_unique'),
+		]
+		indexes = [
+			HnswIndex(
+				name='idx_cv_skill_embedding',
+				fields=['embedding'],
+				m=16,
+				ef_construction=64,
+				opclasses=['vector_cosine_ops'],
+			),
 		]
 
 	def __str__(self):
@@ -199,11 +209,24 @@ class CVSkill(models.Model):
 class JobPostingSkill(models.Model):
 	job_posting = models.ForeignKey(JobPosting, on_delete=models.CASCADE)
 	skill = models.ForeignKey(Skill, on_delete=models.CASCADE)
+	type = models.CharField(max_length=16, choices=SkillType.choices, default=SkillType.HARD)
+	description = models.TextField(blank=True)
+	is_required = models.BooleanField(default=False)
+	embedding = VectorField(dimensions=1536, null=True, blank=True)
 
 	class Meta:
 		constraints = [
 			models.UniqueConstraint(
 				fields=['job_posting', 'skill'], name='job_posting_skill_unique'
+			),
+		]
+		indexes = [
+			HnswIndex(
+				name='idx_job_posting_skill_embedding',
+				fields=['embedding'],
+				m=16,
+				ef_construction=64,
+				opclasses=['vector_cosine_ops'],
 			),
 		]
 

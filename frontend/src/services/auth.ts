@@ -17,6 +17,7 @@ export interface SignupPayload extends LoginPayload {
   first_name: string;
   last_name: string;
   role: UserRole;
+  date_of_birth?: string;
   company_name?: string;
   company_description?: string;
 }

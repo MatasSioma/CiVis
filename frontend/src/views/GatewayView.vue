@@ -61,6 +61,10 @@ const summaryRows = computed<{ label: string; value: string }[]>(() => {
       rows.push({ label: 'El. paštas', value: signupPayload.email });
     }
 
+    if (signupPayload.role === 'job_seeker' && signupPayload.date_of_birth) {
+      rows.push({ label: 'Gimimo data', value: signupPayload.date_of_birth });
+    }
+
     if (signupPayload.role === 'employer') {
       if (signupPayload.company_name) {
         rows.push({ label: 'Įmonės pavadinimas', value: signupPayload.company_name });
@@ -161,6 +165,10 @@ async function submit() {
         last_name: signupPayload.last_name,
         password: password.value,
         personal_code: code,
+        date_of_birth:
+          signupPayload.role === 'job_seeker'
+            ? signupPayload.date_of_birth
+            : undefined,
         company_name:
           signupPayload.role === 'employer' ? signupPayload.company_name : undefined,
         company_description:

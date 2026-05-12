@@ -12,6 +12,7 @@ export interface GatewaySignupPayload {
   email: string;
   first_name: string;
   last_name: string;
+  date_of_birth?: string;
   company_name?: string;
   company_description?: string;
 }
