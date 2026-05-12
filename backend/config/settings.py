@@ -12,6 +12,8 @@ def get_csv_env(name, default=''):
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
 PERSONAL_CODE_PEPPER = os.environ.get('PERSONAL_CODE_PEPPER', SECRET_KEY)
+# Env var is OPEN_API_KEY (note: misspelled in .env) — normalize on the Python side.
+OPENAI_API_KEY = os.environ.get('OPEN_API_KEY', '')
 
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
@@ -105,4 +107,6 @@ REST_FRAMEWORK = {
 	'DEFAULT_PERMISSION_CLASSES': [
 		'rest_framework.permissions.AllowAny',
 	],
+	'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+	'PAGE_SIZE': 10,
 }

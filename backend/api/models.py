@@ -41,6 +41,12 @@ class Company(models.Model):
 	owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='companies')
 	name = models.CharField(max_length=255)
 	description = models.TextField()
+	registration_code = models.CharField(max_length=20, blank=True, default='')
+	address = models.CharField(max_length=255, blank=True, default='')
+	contact_email = models.EmailField(blank=True, default='')
+	contact_phone = models.CharField(max_length=32, blank=True, default='')
+	website = models.URLField(blank=True, default='')
+	date_established = models.DateField(null=True, blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -102,6 +108,10 @@ class JobPosting(models.Model):
 		INTERNSHIP = 'internship', 'Internship'
 		TEMPORARY = 'temporary', 'Temporary'
 
+	class WorkplaceType(models.TextChoices):
+		ON_SITE = 'on_site', 'On-site'
+		REMOTE = 'remote', 'Remote'
+
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='job_postings')
 	industry = models.ForeignKey(
@@ -109,14 +119,14 @@ class JobPosting(models.Model):
 	)
 	title = models.CharField(max_length=255)
 	description = models.TextField()
+	workplace_type = models.CharField(
+		max_length=16, choices=WorkplaceType.choices, default=WorkplaceType.ON_SITE
+	)
 	location = models.CharField(max_length=64, null=True, blank=True)
 	salary_min = models.IntegerField(null=True, blank=True)
 	salary_max = models.IntegerField(null=True, blank=True)
 	job_type = models.CharField(max_length=32, choices=JobType.choices)
 	status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
-	skills = models.ManyToManyField(
-		Skill, through='JobPostingSkill', related_name='job_postings', blank=True
-	)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -208,7 +218,7 @@ class CVSkill(models.Model):
 
 class JobPostingSkill(models.Model):
 	job_posting = models.ForeignKey(JobPosting, on_delete=models.CASCADE)
-	skill = models.ForeignKey(Skill, on_delete=models.CASCADE)
+	name = models.CharField(max_length=100)
 	type = models.CharField(max_length=16, choices=SkillType.choices, default=SkillType.HARD)
 	description = models.TextField(blank=True)
 	is_required = models.BooleanField(default=False)
@@ -217,7 +227,7 @@ class JobPostingSkill(models.Model):
 	class Meta:
 		constraints = [
 			models.UniqueConstraint(
-				fields=['job_posting', 'skill'], name='job_posting_skill_unique'
+				fields=['job_posting', 'name'], name='job_posting_skill_unique'
 			),
 		]
 		indexes = [
@@ -231,4 +241,4 @@ class JobPostingSkill(models.Model):
 		]
 
 	def __str__(self):
-		return f'{self.job_posting} - {self.skill}'
+		return f'{self.job_posting} - {self.name}'

@@ -13,3 +13,7 @@ body,
 #app {
   @apply h-screen bg-background;
 }
+
+button:not(:disabled) {
+  cursor: pointer;
+}

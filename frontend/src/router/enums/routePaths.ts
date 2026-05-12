@@ -5,6 +5,8 @@ export const ROUTE_PATHS = {
   ABOUT: 'about',
   CANDIDATE_DASHBOARD: 'candidate',
   EMPLOYER_DASHBOARD: 'employer',
+  EMPLOYER_JOB_POSTING_NEW: 'employer/job-postings/new',
+  EMPLOYER_JOB_POSTING_EDIT: 'employer/job-postings/:id',
   LOGIN: 'login',
   SIGNUP: 'signup',
   GATEWAY: 'gateway',

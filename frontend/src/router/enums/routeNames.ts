@@ -5,6 +5,8 @@ export const ROUTE_NAMES = {
   ABOUT: 'About',
   CANDIDATE_DASHBOARD: 'CandidateDashboard',
   EMPLOYER_DASHBOARD: 'EmployerDashboard',
+  EMPLOYER_JOB_POSTING_NEW: 'EmployerJobPostingNew',
+  EMPLOYER_JOB_POSTING_EDIT: 'EmployerJobPostingEdit',
   LOGIN: 'Login',
   SIGNUP: 'Signup',
   GATEWAY: 'Gateway',

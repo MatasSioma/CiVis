@@ -1,16 +1,21 @@
 from django.contrib.auth import login, logout
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CV, Application, Company, JobPosting, Skill, User
+from .models import CV, Application, Company, Industry, JobPosting, JobPostingSkill, Skill, User
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
 	CompanySerializer,
 	CVSerializer,
+	IndustrySerializer,
+	JobPostingListSerializer,
 	JobPostingSerializer,
 	LoginSerializer,
 	SignupSerializer,
@@ -99,9 +104,32 @@ class CompanyViewSet(viewsets.ModelViewSet):
 		serializer.save(owner=self.request.user)
 
 
+class IndustryViewSet(viewsets.ModelViewSet):
+	queryset = Industry.objects.all().order_by('name')
+	serializer_class = IndustrySerializer
+	permission_classes = [IsEmployerForWrite]
+	pagination_class = None
+
+	def create(self, request, *args, **kwargs):
+		serializer = self.get_serializer(data=request.data)
+		serializer.is_valid(raise_exception=True)
+		name = serializer.validated_data['name'].strip()
+
+		if not name:
+			raise ValidationError({'name': 'Pavadinimas negali buti tuscias.'})
+
+		industry, _ = Industry.objects.get_or_create(name=name)
+		return Response(
+			IndustrySerializer(industry).data,
+			status=status.HTTP_201_CREATED,
+		)
+
+
 class SkillViewSet(viewsets.ModelViewSet):
 	queryset = Skill.objects.all().order_by('name')
 	serializer_class = SkillSerializer
+	permission_classes = [IsEmployerForWrite]
+	pagination_class = None
 
 
 class CVViewSet(viewsets.ModelViewSet):
@@ -118,8 +146,13 @@ class CVViewSet(viewsets.ModelViewSet):
 
 class JobPostingViewSet(viewsets.ModelViewSet):
 	queryset = JobPosting.objects.all().order_by('-created_at')
-	serializer_class = JobPostingSerializer
 	permission_classes = [IsEmployerForWrite]
+
+	def get_serializer_class(self):
+		if self.action == 'list':
+			return JobPostingListSerializer
+
+		return JobPostingSerializer
 
 	def get_queryset(self):
 		queryset = JobPosting.objects.all().order_by('-created_at')
@@ -128,9 +161,63 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 			self.request.user.is_authenticated
 			and self.request.user.role == User.Role.EMPLOYER
 		):
-			return queryset.filter(company__owner=self.request.user)
+			queryset = queryset.filter(company__owner=self.request.user)
+		else:
+			queryset = queryset.filter(status=JobPosting.Status.OPEN)
 
-		return queryset.filter(status=JobPosting.Status.OPEN)
+		if self.action in {'retrieve', 'update', 'partial_update'}:
+			queryset = queryset.select_related('industry').prefetch_related(
+				'jobpostingskill_set'
+			)
+		elif self.action == 'list':
+			queryset = queryset.select_related('industry')
+
+		return queryset
+
+	def perform_create(self, serializer):
+		company = self.request.user.companies.first()
+
+		if company is None:
+			raise ValidationError(
+				{'company': 'Pirmiausia sukurkite įmonės profilį.'}
+			)
+
+		serializer.save(company=company)
+
+	@action(detail=True, methods=['post'])
+	def clone(self, request, pk=None):
+		original = self.get_object()
+		original_skills = list(original.jobpostingskill_set.all())
+
+		with transaction.atomic():
+			clone = JobPosting.objects.create(
+				company=original.company,
+				industry=original.industry,
+				title=original.title,
+				description=original.description,
+				workplace_type=original.workplace_type,
+				location=original.location,
+				salary_min=original.salary_min,
+				salary_max=original.salary_max,
+				job_type=original.job_type,
+				status=JobPosting.Status.DRAFT,
+			)
+			JobPostingSkill.objects.bulk_create(
+				[
+					JobPostingSkill(
+						job_posting=clone,
+						name=skill.name,
+						type=skill.type,
+						description=skill.description,
+						is_required=skill.is_required,
+						embedding=skill.embedding,
+					)
+					for skill in original_skills
+				]
+			)
+
+		serializer = JobPostingSerializer(clone, context={'request': request})
+		return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):

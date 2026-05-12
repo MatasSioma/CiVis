@@ -63,7 +63,7 @@ class CVAdmin(admin.ModelAdmin):
 class JobPostingSkillInline(admin.TabularInline):
 	model = JobPostingSkill
 	extra = 0
-	autocomplete_fields = ('skill',)
+	fields = ('name', 'type', 'is_required', 'description')
 
 
 @admin.register(JobPosting)
@@ -93,7 +93,7 @@ class CVSkillAdmin(admin.ModelAdmin):
 
 @admin.register(JobPostingSkill)
 class JobPostingSkillAdmin(admin.ModelAdmin):
-	list_display = ('job_posting', 'skill', 'type', 'is_required')
+	list_display = ('job_posting', 'name', 'type', 'is_required')
 	list_filter = ('type', 'is_required')
-	search_fields = ('job_posting__title', 'skill__name', 'description')
-	autocomplete_fields = ('job_posting', 'skill')
+	search_fields = ('job_posting__title', 'name', 'description')
+	autocomplete_fields = ('job_posting',)

@@ -5,6 +5,7 @@ from .views import (
 	ApplicationViewSet,
 	CompanyViewSet,
 	CVViewSet,
+	IndustryViewSet,
 	JobPostingViewSet,
 	LoginView,
 	LogoutView,
@@ -15,6 +16,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'companies', CompanyViewSet)
+router.register(r'industries', IndustryViewSet)
 router.register(r'skills', SkillViewSet)
 router.register(r'cvs', CVViewSet)
 router.register(r'job-postings', JobPostingViewSet)
