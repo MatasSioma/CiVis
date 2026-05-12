@@ -18,7 +18,7 @@ withDefaults(
     <img
       alt="CiVis"
       class="block h-12 w-auto shrink-0 object-contain align-middle"
-      :class="{ 'h-[52px]': compact, 'h-16': large }"
+      :class="{ 'h-13': compact, 'h-16': large }"
       :src="logoUrl" />
   </div>
 </template>

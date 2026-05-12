@@ -15,7 +15,24 @@ PERSONAL_CODE_PEPPER = os.environ.get('PERSONAL_CODE_PEPPER', SECRET_KEY)
 # Env var is OPEN_API_KEY (note: misspelled in .env) — normalize on the Python side.
 OPENAI_API_KEY = os.environ.get('OPEN_API_KEY', '')
 
+MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
+MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
+MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'civis-cvs')
+MINIO_USE_SSL = os.environ.get('MINIO_USE_SSL', 'false').lower() == 'true'
+
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_ID = os.environ.get('STRIPE_PRICE_ID', '')
+
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+
 DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 ALLOWED_HOSTS = ['*']
 

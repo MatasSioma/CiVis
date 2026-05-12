@@ -51,9 +51,7 @@ class SignupSerializer(serializers.Serializer):
 
 		personal_code_hash = make_personal_code_hash(attrs['personal_code'])
 
-		if User.objects.filter(
-			personal_code_hash=personal_code_hash, role=attrs['role']
-		).exists():
+		if User.objects.filter(personal_code_hash=personal_code_hash, role=attrs['role']).exists():
 			raise serializers.ValidationError(
 				{'personal_code': 'Paskyra su siuo asmens kodu jau egzistuoja.'}
 			)
@@ -391,7 +389,39 @@ class ApplicationSerializer(serializers.ModelSerializer):
 class CVSkillSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = CVSkill
-		fields = ['id', 'cv', 'skill', 'type', 'description']
+		fields = ['id', 'cv', 'skill', 'type', 'description', 'years_of_experience']
+
+
+class CVDetailSkillSerializer(serializers.Serializer):
+	name = serializers.CharField(source='skill.name')
+	type = serializers.CharField()
+	years_of_experience = serializers.IntegerField()
+
+
+class CVDetailSerializer(serializers.ModelSerializer):
+	skills = CVDetailSkillSerializer(source='cvskill_set', many=True, read_only=True)
+
+	class Meta:
+		model = CV
+		fields = ['id', 'file_key', 'skills', 'created_at', 'updated_at']
+		read_only_fields = fields
+
+
+class CVSubmitSkillSerializer(serializers.Serializer):
+	name = serializers.CharField(max_length=100)
+	type = serializers.ChoiceField(choices=SkillType.choices)
+	years_of_experience = serializers.IntegerField(min_value=0)
+
+
+class CVSubmitSerializer(serializers.Serializer):
+	file_key = serializers.CharField(max_length=512)
+	skills = CVSubmitSkillSerializer(many=True, allow_empty=False)
+
+	def validate_skills(self, value):
+		names = [s['name'].strip().lower() for s in value]
+		if len(names) != len(set(names)):
+			raise serializers.ValidationError('Įgūdžių pavadinimai negali kartotis.')
+		return value
 
 
 class JobPostingSkillSerializer(serializers.ModelSerializer):

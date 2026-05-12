@@ -19,7 +19,7 @@ const markerClasses: Record<ToastType, string> = {
 <template>
   <div
     aria-live="polite"
-    class="fixed bottom-4 right-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
+    class="fixed right-4 bottom-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
     <div
       v-for="toast in toasts"
       :key="toast.id"
@@ -28,12 +28,12 @@ const markerClasses: Record<ToastType, string> = {
       <span
         class="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
         :class="markerClasses[toast.type]" />
-      <p class="min-w-0 flex-1 text-sm font-medium leading-5">
+      <p class="min-w-0 flex-1 text-sm leading-5 font-medium">
         {{ toast.message }}
       </p>
       <button
         aria-label="Uždaryti pranešimą"
-        class="rounded px-1 text-gray-500 hover:bg-background hover:text-gray-950"
+        class="hover:bg-background cursor-pointer rounded px-1 text-gray-500 hover:text-gray-950"
         type="button"
         @click="removeToast(toast.id)">
         ×

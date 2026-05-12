@@ -1,4 +1,4 @@
-type RequestBody = BodyInit | Record<string, unknown> | undefined;
+type RequestBody = BodyInit | object | undefined;
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 

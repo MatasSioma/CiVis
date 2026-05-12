@@ -17,7 +17,7 @@ export const mainLayoutRoutes: RouteRecordRaw[] = [
   {
     path: ROUTE_PATHS.CANDIDATE_DASHBOARD,
     name: ROUTE_NAMES.CANDIDATE_DASHBOARD,
-    component: () => import('@/views/CandidateDashboardView.vue'),
+    component: () => import('@/views/CandidateDashboardView/MainView.vue'),
     meta: { requiresAuth: true, roles: ['job_seeker'] },
   },
   {
@@ -37,5 +37,17 @@ export const mainLayoutRoutes: RouteRecordRaw[] = [
     name: ROUTE_NAMES.EMPLOYER_JOB_POSTING_EDIT,
     component: () => import('@/views/JobPostingFormView.vue'),
     meta: { requiresAuth: true, roles: ['employer'] },
+  },
+  {
+    path: ROUTE_PATHS.UPLOAD_CV,
+    name: ROUTE_NAMES.UPLOAD_CV,
+    component: () => import('@/views/CandidateDashboardView/UploadCVView.vue'),
+    meta: { requiresAuth: true, roles: ['job_seeker'] },
+  },
+  {
+    path: ROUTE_PATHS.MY_CV,
+    name: ROUTE_NAMES.MY_CV,
+    component: () => import('@/views/CandidateDashboardView/MyCVView.vue'),
+    meta: { requiresAuth: true, roles: ['job_seeker'] },
   },
 ];

@@ -10,6 +10,18 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+
   backend:
     build: ./backend
     command: python manage.py runserver 0.0.0.0:8000
@@ -25,6 +37,7 @@ services:
       - .env
     depends_on:
       - db
+      - minio
 
   frontend:
     build: ./frontend
@@ -41,3 +54,4 @@ services:
 
 volumes:
   pgdata:
+  miniodata:

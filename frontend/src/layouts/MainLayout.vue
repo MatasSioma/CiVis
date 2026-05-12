@@ -36,7 +36,7 @@ async function handleLogout() {
           {{ getRoleLabel(auth.state.user.role) }}
         </RouterLink>
         <button
-          class="rounded bg-primary px-3 py-1 leading-tight text-attention hover:bg-secondary"
+          class="bg-primary text-attention hover:bg-secondary cursor-pointer rounded px-3 py-1 leading-tight"
           type="button"
           @click="handleLogout">
           Atsijungti
@@ -49,13 +49,14 @@ async function handleLogout() {
           >Prisijungti</RouterLink
         >
         <RouterLink
-          class="rounded bg-primary px-3 py-1 leading-tight text-attention no-underline hover:bg-secondary"
+          class="bg-primary text-attention hover:bg-secondary rounded px-3 py-1 leading-tight no-underline"
           :to="{ name: ROUTE_NAMES.SIGNUP }"
           >Registruotis</RouterLink
         >
       </template>
     </template>
-    <main class="mx-auto min-h-[calc(100vh-64px)] max-w-7xl bg-background px-4 py-6">
+    <main
+      class="bg-background mx-auto min-h-[calc(100vh-64px)] max-w-7xl px-4 py-6">
       <RouterView />
     </main>
   </StackedLayout>

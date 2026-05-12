@@ -26,9 +26,7 @@ class User(AbstractUser):
 			),
 		]
 		indexes = [
-			models.Index(
-				fields=['personal_code_hash'], name='api_user_person_3d4420_idx'
-			),
+			models.Index(fields=['personal_code_hash'], name='api_user_person_3d4420_idx'),
 			models.Index(fields=['role']),
 		]
 
@@ -95,6 +93,18 @@ class CV(models.Model):
 		return f'CV of {self.user}'
 
 
+class PendingCVPayment(models.Model):
+	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='pending_cv_payments')
+	file_key = models.CharField(max_length=512)
+	skills_data = models.JSONField()
+	stripe_session_id = models.CharField(max_length=255, unique=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	def __str__(self):
+		return f'PendingCV({self.user}, {self.stripe_session_id})'
+
+
 class JobPosting(models.Model):
 	class Status(models.TextChoices):
 		DRAFT = 'draft', 'Draft'
@@ -114,9 +124,7 @@ class JobPosting(models.Model):
 
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='job_postings')
-	industry = models.ForeignKey(
-		Industry, on_delete=models.PROTECT, related_name='job_postings'
-	)
+	industry = models.ForeignKey(Industry, on_delete=models.PROTECT, related_name='job_postings')
 	title = models.CharField(max_length=255)
 	description = models.TextField()
 	workplace_type = models.CharField(
@@ -196,6 +204,7 @@ class CVSkill(models.Model):
 	skill = models.ForeignKey(Skill, on_delete=models.CASCADE)
 	type = models.CharField(max_length=16, choices=SkillType.choices, default=SkillType.HARD)
 	description = models.TextField(blank=True)
+	years_of_experience = models.PositiveSmallIntegerField(default=0)
 	embedding = VectorField(dimensions=1536, null=True, blank=True)
 
 	class Meta:

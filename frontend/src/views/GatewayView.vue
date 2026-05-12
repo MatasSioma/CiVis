@@ -26,14 +26,20 @@ onMounted(() => {
 const flow = computed(() => gateway.state.flow);
 const isSignup = computed(() => flow.value === 'signup');
 
-const title = computed(() => (isSignup.value ? 'Registracija' : 'Prisijungimas'));
+const title = computed(() =>
+  isSignup.value ? 'Registracija' : 'Prisijungimas',
+);
 const subtitle = computed(() =>
   isSignup.value
     ? 'Lietuvos Respublikos piliečiui — patvirtinkite tapatybę, kad užbaigtumėte registraciją.'
     : 'Lietuvos Respublikos piliečiui — patvirtinkite tapatybę, kad galėtumėte prisijungti.',
 );
-const submitLabel = computed(() => (isSignup.value ? 'Registruotis' : 'Prisijungti'));
-const loadingLabel = computed(() => (isSignup.value ? 'Kuriama...' : 'Jungiama...'));
+const submitLabel = computed(() =>
+  isSignup.value ? 'Registruotis' : 'Prisijungti',
+);
+const loadingLabel = computed(() =>
+  isSignup.value ? 'Kuriama...' : 'Jungiama...',
+);
 
 const summaryRows = computed<{ label: string; value: string }[]>(() => {
   const payload = gateway.state.payload;
@@ -67,7 +73,10 @@ const summaryRows = computed<{ label: string; value: string }[]>(() => {
 
     if (signupPayload.role === 'employer') {
       if (signupPayload.company_name) {
-        rows.push({ label: 'Įmonės pavadinimas', value: signupPayload.company_name });
+        rows.push({
+          label: 'Įmonės pavadinimas',
+          value: signupPayload.company_name,
+        });
       }
 
       if (signupPayload.company_description) {
@@ -108,7 +117,10 @@ function validate() {
 
 function getLoginErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.details) {
-    const details = error.details as { non_field_errors?: string[]; detail?: string };
+    const details = error.details as {
+      non_field_errors?: string[];
+      detail?: string;
+    };
 
     return (
       details.non_field_errors?.[0] ??
@@ -170,7 +182,9 @@ async function submit() {
             ? signupPayload.date_of_birth
             : undefined,
         company_name:
-          signupPayload.role === 'employer' ? signupPayload.company_name : undefined,
+          signupPayload.role === 'employer'
+            ? signupPayload.company_name
+            : undefined,
         company_description:
           signupPayload.role === 'employer'
             ? signupPayload.company_description
@@ -228,8 +242,10 @@ function cancel() {
 </script>
 
 <template>
-  <div class="font-gateway fixed inset-0 z-10 overflow-y-auto bg-[#F5F7FA] text-[#1A1A1A]">
-    <header class="border-b-4 border-[#FFC107] bg-[#1F4E79] text-white shadow-sm">
+  <div
+    class="font-gateway fixed inset-0 z-10 overflow-y-auto bg-[#F5F7FA] text-[#1A1A1A]">
+    <header
+      class="border-b-4 border-[#FFC107] bg-[#1F4E79] text-white shadow-sm">
       <div class="mx-auto flex max-w-4xl items-center gap-3 px-6 py-3">
         <span
           class="flex h-9 w-9 items-center justify-center rounded-sm bg-[#FFC107] text-sm font-bold text-[#1F4E79]"
@@ -244,46 +260,56 @@ function cancel() {
     </header>
 
     <main class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-      <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#1F4E79]">
+      <p
+        class="text-xs font-semibold tracking-[0.18em] text-[#1F4E79] uppercase">
         E. valdžios vartų imitacija
       </p>
-      <h1 class="mt-2 text-3xl font-bold tracking-tight text-[#1A1A1A] sm:text-4xl">
+      <h1
+        class="mt-2 text-3xl font-bold tracking-tight text-[#1A1A1A] sm:text-4xl">
         {{ title }}
       </h1>
       <p class="mt-2 max-w-2xl text-[15px] leading-7 text-[#3D3D3D]">
         {{ subtitle }}
       </p>
 
-      <details class="mt-6 rounded-md border border-[#D1D9E0] bg-white shadow-sm">
+      <details
+        class="mt-6 rounded-md border border-[#D1D9E0] bg-white shadow-sm">
         <summary
           class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-sm font-semibold text-[#1F4E79] hover:bg-[#F0F4F8]">
           <span>Peržiūrėti įvestus duomenis</span>
           <span
-            class="rounded-sm border border-[#C7D2DC] px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-[#5A6B7B]">
-            {{ summaryRows.length }} {{ summaryRows.length === 1 ? 'įrašas' : 'įrašai' }}
+            class="rounded-sm border border-[#C7D2DC] px-2 py-0.5 text-[11px] font-medium tracking-wider text-[#5A6B7B] uppercase">
+            {{ summaryRows.length }}
+            {{ summaryRows.length === 1 ? 'įrašas' : 'įrašai' }}
           </span>
         </summary>
-        <dl class="divide-y divide-[#E5EAF0] border-t border-[#E5EAF0] px-5 py-3 text-sm">
+        <dl
+          class="divide-y divide-[#E5EAF0] border-t border-[#E5EAF0] px-5 py-3 text-sm">
           <div
             v-for="row in summaryRows"
             :key="row.label"
             class="grid grid-cols-1 gap-1 py-2 sm:grid-cols-[200px_1fr] sm:items-baseline sm:gap-4">
-            <dt class="text-[13px] font-medium uppercase tracking-wide text-[#5A6B7B]">
+            <dt
+              class="text-[13px] font-medium tracking-wide text-[#5A6B7B] uppercase">
               {{ row.label }}
             </dt>
-            <dd class="whitespace-pre-wrap break-words text-[#1A1A1A]">{{ row.value }}</dd>
+            <dd class="wrap-break-word whitespace-pre-wrap text-[#1A1A1A]">
+              {{ row.value }}
+            </dd>
           </div>
         </dl>
       </details>
 
-      <h2 class="mt-8 text-sm font-semibold uppercase tracking-[0.16em] text-[#1F4E79]">
+      <h2
+        class="mt-8 text-sm font-semibold tracking-[0.16em] text-[#1F4E79] uppercase">
         Pasirinkite prisijungimo būdą
       </h2>
 
       <form
         class="mt-3 overflow-hidden rounded-md border border-[#D1D9E0] bg-white shadow-sm"
         @submit.prevent="submit">
-        <div class="flex items-center gap-3 border-b border-[#E5EAF0] bg-[#F7F9FC] px-5 py-3">
+        <div
+          class="flex items-center gap-3 border-b border-[#E5EAF0] bg-[#F7F9FC] px-5 py-3">
           <span
             class="flex h-8 w-8 items-center justify-center rounded-sm bg-[#1F4E79] text-xs font-bold text-white"
             aria-hidden="true">
@@ -299,11 +325,13 @@ function cancel() {
 
         <div class="grid gap-4 px-5 py-5">
           <label class="block">
-            <span class="text-sm font-semibold text-[#1A1A1A]">Asmens kodas</span>
+            <span class="text-sm font-semibold text-[#1A1A1A]"
+              >Asmens kodas</span
+            >
             <input
               v-model="personalCode"
               autocomplete="username"
-              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] outline-none transition placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
+              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] transition outline-none placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
               inputmode="numeric"
               maxlength="11"
               placeholder="11 skaitmenų"
@@ -311,21 +339,25 @@ function cancel() {
           </label>
 
           <label class="block">
-            <span class="text-sm font-semibold text-[#1A1A1A]">Slaptažodis</span>
+            <span class="text-sm font-semibold text-[#1A1A1A]"
+              >Slaptažodis</span
+            >
             <input
               v-model="password"
               :autocomplete="isSignup ? 'new-password' : 'current-password'"
-              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] outline-none transition placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
+              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] transition outline-none placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
               placeholder="Įveskite slaptažodį"
               type="password" />
           </label>
 
           <label v-if="isSignup" class="block">
-            <span class="text-sm font-semibold text-[#1A1A1A]">Pakartoti slaptažodį</span>
+            <span class="text-sm font-semibold text-[#1A1A1A]"
+              >Pakartoti slaptažodį</span
+            >
             <input
               v-model="passwordConfirm"
               autocomplete="new-password"
-              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] outline-none transition placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
+              class="mt-1 h-11 w-full rounded-sm border border-[#C7D2DC] bg-white px-3 text-[15px] text-[#1A1A1A] transition outline-none placeholder:text-[#8A98A6] focus:border-[#1F4E79] focus:ring-2 focus:ring-[#FFC107]/60"
               placeholder="Pakartokite slaptažodį"
               type="password" />
           </label>
@@ -335,7 +367,7 @@ function cancel() {
           </p>
 
           <button
-            class="mt-1 h-11 w-full rounded-sm bg-[#1F4E79] px-4 font-semibold uppercase tracking-wide text-white transition hover:bg-[#15375A] focus:outline-none focus:ring-2 focus:ring-[#FFC107] disabled:cursor-not-allowed disabled:bg-[#8A98A6]"
+            class="mt-1 h-11 w-full cursor-pointer rounded-sm bg-[#1F4E79] px-4 font-semibold tracking-wide text-white uppercase transition hover:bg-[#15375A] focus:ring-2 focus:ring-[#FFC107] focus:outline-none disabled:cursor-not-allowed disabled:bg-[#8A98A6]"
             :disabled="auth.state.isLoading"
             type="submit">
             {{ auth.state.isLoading ? loadingLabel : submitLabel }}
@@ -344,15 +376,17 @@ function cancel() {
       </form>
 
       <button
-        class="mt-4 text-sm font-semibold text-[#1F4E79] underline-offset-4 hover:underline"
+        class="mt-4 cursor-pointer text-sm font-semibold text-[#1F4E79] underline-offset-4 hover:underline"
         type="button"
         @click="cancel">
         ← Atšaukti ir grįžti
       </button>
 
-      <p class="mt-10 border-t border-[#E5EAF0] pt-4 text-center text-xs text-[#5A6B7B]">
-        Šis puslapis yra elektroninių valdžios vartų imitacija edukaciniais tikslais ir
-        nesusijęs su Lietuvos Respublikos elektroninių valdžios vartų portalu.
+      <p
+        class="mt-10 border-t border-[#E5EAF0] pt-4 text-center text-xs text-[#5A6B7B]">
+        Šis puslapis yra elektroninių valdžios vartų imitacija edukaciniais
+        tikslais ir nesusijęs su Lietuvos Respublikos elektroninių valdžios
+        vartų portalu.
       </p>
     </main>
   </div>
@@ -360,7 +394,12 @@ function cancel() {
 
 <style scoped>
 .font-gateway {
-  font-family: 'Open Sans', -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Open Sans',
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
 .font-gateway summary::-webkit-details-marker {

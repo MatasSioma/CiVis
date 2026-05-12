@@ -9,6 +9,7 @@ from .models import (
 	Industry,
 	JobPosting,
 	JobPostingSkill,
+	PendingCVPayment,
 	Skill,
 	User,
 )
@@ -16,7 +17,15 @@ from .models import (
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
-	list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'date_of_birth', 'is_staff')
+	list_display = (
+		'username',
+		'email',
+		'first_name',
+		'last_name',
+		'role',
+		'date_of_birth',
+		'is_staff',
+	)
 	list_filter = ('role', 'is_staff', 'is_superuser', 'is_active')
 	search_fields = ('username', 'email', 'first_name', 'last_name')
 	ordering = ('-date_joined',)
@@ -89,6 +98,13 @@ class CVSkillAdmin(admin.ModelAdmin):
 	list_filter = ('type',)
 	search_fields = ('cv__user__username', 'skill__name', 'description')
 	autocomplete_fields = ('cv', 'skill')
+
+
+@admin.register(PendingCVPayment)
+class PendingCVPaymentAdmin(admin.ModelAdmin):
+	list_display = ('user', 'stripe_session_id', 'created_at')
+	search_fields = ('user__username', 'stripe_session_id')
+	readonly_fields = ('stripe_session_id', 'skills_data')
 
 
 @admin.register(JobPostingSkill)
