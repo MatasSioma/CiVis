@@ -44,6 +44,12 @@ function parseSearch(raw: unknown): string {
 
 const user = computed(() => state.user);
 
+function vocative(name: string): string {
+  if (name.endsWith('s')) return `${name.slice(0, -1)}i`;
+  if (name.endsWith('ė')) return `${name.slice(0, -1)}e`;
+  return name;
+}
+
 const company = ref<Company | null>(null);
 const isCompanyLoading = ref(true);
 const isEditingCompany = ref(false);
@@ -391,7 +397,7 @@ onMounted(() => {
         Darbdavio paskyra
       </p>
       <h1 class="mt-2 text-3xl font-bold text-gray-950">
-        Sveiki, {{ user.first_name || user.email }}
+        Sveiki, {{ user.first_name ? vocative(user.first_name) : user.email }}
       </h1>
     </div>
 

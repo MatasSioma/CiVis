@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { useToasts } from '@/stores/toasts';
 import { cvApi, type CVDetailResponse } from '@/services/cv';
@@ -8,11 +8,14 @@ import { ApiError } from '@/services/api';
 import FormCard from '@/components/FormCard.vue';
 
 const route = useRoute();
+const router = useRouter();
 const { showToast } = useToasts();
 
 const cv = ref<CVDetailResponse | null>(null);
 const isLoading = ref(true);
 const notFound = ref(false);
+const showDeleteConfirm = ref(false);
+const isDeleting = ref(false);
 
 const SKILL_GROUPS = [
   { type: 'hard', label: 'Techniniai įgūdžiai' },
@@ -21,6 +24,8 @@ const SKILL_GROUPS = [
 ] as const;
 
 const isPaymentReturn = route.query.payment === 'success';
+const sessionId =
+  typeof route.query.session_id === 'string' ? route.query.session_id : '';
 
 function skillsByType(type: string) {
   return cv.value?.skills.filter((s) => s.type === type) ?? [];
@@ -52,9 +57,46 @@ async function fetchCV(retries: number) {
   }
 }
 
+async function finalizePayment() {
+  try {
+    cv.value = await cvApi.finalize(sessionId);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) {
+      throw error;
+    }
+  }
+}
+
+async function confirmDelete() {
+  isDeleting.value = true;
+
+  try {
+    await cvApi.deleteMyCV();
+    showToast('CV ištrintas.', 'success');
+    router.push({ name: ROUTE_NAMES.CANDIDATE_DASHBOARD });
+  } catch {
+    showToast('Nepavyko ištrinti CV. Bandykite dar kartą.', 'error');
+  } finally {
+    isDeleting.value = false;
+    showDeleteConfirm.value = false;
+  }
+}
+
 onMounted(async () => {
-  await fetchCV(isPaymentReturn ? 3 : 0);
+  if (isPaymentReturn && sessionId) {
+    try {
+      await finalizePayment();
+    } catch {
+      // Ignore — fall back to webhook + retry-fetch.
+    }
+  }
+
+  if (!cv.value) {
+    await fetchCV(isPaymentReturn ? 3 : 0);
+  }
+
   isLoading.value = false;
+
   if (isPaymentReturn && cv.value) {
     showToast('Mokėjimas sėkmingas! CV išsaugotas.', 'success');
   }
@@ -81,7 +123,7 @@ onMounted(async () => {
     </FormCard>
 
     <FormCard v-else-if="cv" max-width="max-w-3xl">
-      <div class="flex items-start justify-between">
+      <div class="flex items-start justify-between gap-4">
         <div>
           <h1 class="text-2xl leading-tight font-bold text-gray-950">
             Mano CV
@@ -90,11 +132,20 @@ onMounted(async () => {
             Įkelta: {{ formatDate(cv.created_at) }}
           </p>
         </div>
-        <RouterLink
-          class="text-secondary hover:text-secondary/80 text-sm font-medium"
-          :to="{ name: ROUTE_NAMES.UPLOAD_CV }">
-          Įkelti naują →
-        </RouterLink>
+        <div class="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+          <button
+            class="bg-attention hover:bg-secondary cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold text-white transition"
+            type="button"
+            @click="router.push({ name: ROUTE_NAMES.UPLOAD_CV })">
+            Įkelti naują
+          </button>
+          <button
+            class="cursor-pointer rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
+            type="button"
+            @click="showDeleteConfirm = true">
+            Ištrinti CV
+          </button>
+        </div>
       </div>
 
       <template v-for="group in SKILL_GROUPS" :key="group.type">
@@ -103,19 +154,19 @@ onMounted(async () => {
             class="text-sm font-semibold uppercase tracking-wide text-gray-500">
             {{ group.label }}
           </h2>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span
+          <ul class="mt-2 space-y-2">
+            <li
               v-for="skill in skillsByType(group.type)"
               :key="skill.name"
-              class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-gray-800">
-              {{ skill.name }}
-              <span
-                v-if="skill.years_of_experience > 0"
-                class="text-xs text-gray-500">
-                · {{ skill.years_of_experience }} m.
-              </span>
-            </span>
-          </div>
+              class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+              <div class="font-medium text-gray-900">{{ skill.name }}</div>
+              <p
+                v-if="skill.description"
+                class="mt-0.5 text-xs text-gray-600">
+                {{ skill.description }}
+              </p>
+            </li>
+          </ul>
         </div>
       </template>
 
@@ -123,5 +174,36 @@ onMounted(async () => {
         Nėra išsaugotų įgūdžių.
       </p>
     </FormCard>
+
+    <div
+      v-if="showDeleteConfirm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      @click.self="showDeleteConfirm = false">
+      <div class="w-full max-w-md rounded-lg bg-white p-6 shadow-lg">
+        <h2 class="text-lg font-semibold text-gray-950">
+          Ar tikrai norite ištrinti CV?
+        </h2>
+        <p class="mt-3 text-sm text-gray-700">
+          <span class="font-semibold text-red-600">Įspėjimas:</span>
+          kartu bus ištrintos visos jūsų paraiškos darbo skelbimams.
+        </p>
+        <div class="mt-5 flex justify-end gap-3">
+          <button
+            class="h-10 cursor-pointer rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+            :disabled="isDeleting"
+            type="button"
+            @click="showDeleteConfirm = false">
+            Atšaukti
+          </button>
+          <button
+            class="h-10 cursor-pointer rounded-md bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            :disabled="isDeleting"
+            type="button"
+            @click="confirmDelete">
+            {{ isDeleting ? 'Trinama...' : 'Ištrinti' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

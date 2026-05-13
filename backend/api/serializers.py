@@ -12,11 +12,20 @@ from .models import (
 	Industry,
 	JobPosting,
 	JobPostingSkill,
-	Skill,
 	SkillType,
 	User,
 )
 from .security import make_personal_code_hash
+
+
+def skill_embed_text(name: str, skill_type: str, description: str) -> str:
+	"""Canonical embedding text shared by CVSkill and JobPostingSkill so both
+	sides land in the same vector space for matching."""
+	type_label = SkillType(skill_type).label
+	desc = (description or '').strip()
+	if desc:
+		return f'{name} — {type_label}: {desc}'
+	return f'{name} — {type_label}'
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -161,22 +170,6 @@ class IndustrySerializer(serializers.ModelSerializer):
 		read_only_fields = ['id']
 
 
-class SkillSerializer(serializers.ModelSerializer):
-	class Meta:
-		model = Skill
-		fields = ['id', 'name']
-		read_only_fields = ['id']
-
-
-class CVSerializer(serializers.ModelSerializer):
-	skills = SkillSerializer(many=True, read_only=True)
-
-	class Meta:
-		model = CV
-		fields = ['id', 'user', 'file_key', 'skills', 'created_at', 'updated_at']
-		read_only_fields = ['id', 'user', 'created_at', 'updated_at']
-
-
 class JobPostingSkillWriteSerializer(serializers.Serializer):
 	name = serializers.CharField(max_length=100)
 	type = serializers.ChoiceField(choices=SkillType.choices, default=SkillType.HARD)
@@ -274,14 +267,6 @@ class JobPostingSerializer(serializers.ModelSerializer):
 
 		return attrs
 
-	@staticmethod
-	def _embed_text(name: str, skill_type: str, description: str) -> str:
-		type_label = SkillType(skill_type).label
-		desc = (description or '').strip()
-		if desc:
-			return f'{name} — {type_label}: {desc}'
-		return f'{name} — {type_label}'
-
 	def _prepare_skill_rows(self, skills_payload):
 		prepared = []
 
@@ -296,7 +281,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
 					'type': skill_type,
 					'description': description,
 					'is_required': entry.get('is_required', False),
-					'embed_text': self._embed_text(name, skill_type, description),
+					'embed_text': skill_embed_text(name, skill_type, description),
 				}
 			)
 
@@ -345,7 +330,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
 			# Build a cache from embed_text -> existing embedding so unchanged
 			# skills don't require a new OpenAI call.
 			existing_cache = {
-				self._embed_text(s.name, s.type, s.description): s.embedding
+				skill_embed_text(s.name, s.type, s.description): s.embedding
 				for s in instance.jobpostingskill_set.all()
 				if s.embedding is not None
 			}
@@ -406,20 +391,14 @@ class ApplicationSerializer(serializers.ModelSerializer):
 		read_only_fields = ['id', 'applicant', 'created_at', 'updated_at']
 
 
-class CVSkillSerializer(serializers.ModelSerializer):
+class CVSkillReadSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = CVSkill
-		fields = ['id', 'cv', 'skill', 'type', 'description', 'years_of_experience']
-
-
-class CVDetailSkillSerializer(serializers.Serializer):
-	name = serializers.CharField(source='skill.name')
-	type = serializers.CharField()
-	years_of_experience = serializers.IntegerField()
+		fields = ['name', 'type', 'description']
 
 
 class CVDetailSerializer(serializers.ModelSerializer):
-	skills = CVDetailSkillSerializer(source='cvskill_set', many=True, read_only=True)
+	skills = CVSkillReadSerializer(source='cvskill_set', many=True, read_only=True)
 
 	class Meta:
 		model = CV
@@ -430,7 +409,20 @@ class CVDetailSerializer(serializers.ModelSerializer):
 class CVSubmitSkillSerializer(serializers.Serializer):
 	name = serializers.CharField(max_length=100)
 	type = serializers.ChoiceField(choices=SkillType.choices)
-	years_of_experience = serializers.IntegerField(min_value=0)
+	description = serializers.CharField(
+		allow_blank=True, allow_null=True, required=False, default=''
+	)
+
+	def validate_name(self, value):
+		value = value.strip()
+
+		if not value:
+			raise serializers.ValidationError('Įgūdžio pavadinimas negali būti tuščias.')
+
+		return value
+
+	def validate_description(self, value):
+		return (value or '').strip()
 
 
 class CVSubmitSerializer(serializers.Serializer):

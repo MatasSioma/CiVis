@@ -21,7 +21,7 @@ const selectedFile = ref<File | null>(null);
 interface SkillRow {
   name: string;
   type: SkillType;
-  years_of_experience: number;
+  description: string;
 }
 
 const hardSkills = reactive<SkillRow[]>([]);
@@ -33,13 +33,13 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const SKILL_STEPS = [
   {
     key: 'hard' as const,
-    label: 'Techniniai įgūdžiai',
+    label: 'Techniniai įgūdžiai (Hard skills)',
     description:
-      'Programavimo kalbos, įrankiai, technologijos ir kiti techniniai gebėjimai.',
+      'Kalbos, įrankiai, technologijos ir kiti pamatuojami gebėjimai.',
   },
   {
     key: 'soft' as const,
-    label: 'Socialiniai įgūdžiai',
+    label: 'Socialiniai įgūdžiai (Soft skills)',
     description:
       'Komandinis darbas, komunikacija, lyderystė ir kiti socialiniai gebėjimai.',
   },
@@ -47,7 +47,7 @@ const SKILL_STEPS = [
     key: 'experience' as const,
     label: 'Patirtis',
     description:
-      'Projektų valdymas, pramonės šakos, pareigos ir kita patirtis.',
+      'Eitos pareigos, pramonės šakos ir kita patirtis.',
   },
 ];
 
@@ -98,9 +98,9 @@ function distributeSkills(extracted: ExtractedSkill[]) {
 
   for (const s of extracted) {
     const row: SkillRow = {
-      name: s.name,
+      name: s.name.charAt(0).toUpperCase() + s.name.slice(1),
       type: s.type,
-      years_of_experience: s.years_of_experience,
+      description: s.description ?? '',
     };
     if (s.type === 'hard') hardSkills.push(row);
     else if (s.type === 'soft') softSkills.push(row);
@@ -171,7 +171,7 @@ function addSkill(type: SkillType) {
       : type === 'soft'
         ? softSkills
         : experienceSkills;
-  arr.push({ name: '', type, years_of_experience: 0 });
+  arr.push({ name: '', type, description: '' });
 }
 
 function removeSkill(type: SkillType, index: number) {
@@ -194,10 +194,6 @@ function validateSkills(): string {
 
   for (const skill of all) {
     if (!skill.name.trim()) return 'Visi įgūdžiai turi turėti pavadinimą.';
-    if (skill.years_of_experience < 0)
-      return 'Patirtis metais negali būti neigiama.';
-    if (!Number.isInteger(skill.years_of_experience))
-      return 'Patirtis metais turi būti sveikasis skaičius.';
   }
 
   const names = all.map((s) => s.name.trim().toLowerCase());
@@ -223,7 +219,7 @@ async function handleSubmit() {
     const payload: ExtractedSkill[] = getAllSkills().map((s) => ({
       name: s.name.trim(),
       type: s.type,
-      years_of_experience: s.years_of_experience,
+      description: s.description.trim(),
     }));
 
     const { checkout_url } = await cvApi.checkout({
@@ -263,7 +259,7 @@ async function handleSubmit() {
           <span class="text-sm font-medium text-gray-700">PDF failas</span>
           <input
             accept=".pdf,application/pdf"
-            class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 px-3 text-gray-950 transition outline-none file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-gray-700 focus:ring-2"
+            class="focus:border-secondary focus:ring-secondary/40 mt-1 w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-950 transition outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 focus:ring-2"
             type="file"
             @change="onFileChange" />
         </label>

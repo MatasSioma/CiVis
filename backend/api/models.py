@@ -69,19 +69,10 @@ class Industry(models.Model):
 		return self.name
 
 
-class Skill(models.Model):
-	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-	name = models.CharField(max_length=100, unique=True)
-
-	def __str__(self):
-		return self.name
-
-
 class CV(models.Model):
 	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cv')
 	file_key = models.CharField(max_length=512)
-	skills = models.ManyToManyField(Skill, through='CVSkill', related_name='cvs', blank=True)
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
@@ -201,15 +192,16 @@ class SkillType(models.TextChoices):
 
 class CVSkill(models.Model):
 	cv = models.ForeignKey(CV, on_delete=models.CASCADE)
-	skill = models.ForeignKey(Skill, on_delete=models.CASCADE)
+	name = models.CharField(max_length=100)
 	type = models.CharField(max_length=16, choices=SkillType.choices, default=SkillType.HARD)
 	description = models.TextField(blank=True)
-	years_of_experience = models.PositiveSmallIntegerField(default=0)
 	embedding = VectorField(dimensions=1536, null=True, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
 		constraints = [
-			models.UniqueConstraint(fields=['cv', 'skill'], name='cv_skill_unique'),
+			models.UniqueConstraint(fields=['cv', 'name'], name='cv_skill_unique'),
 		]
 		indexes = [
 			HnswIndex(
@@ -222,7 +214,7 @@ class CVSkill(models.Model):
 		]
 
 	def __str__(self):
-		return f'{self.cv} - {self.skill}'
+		return f'{self.cv} - {self.name}'
 
 
 class JobPostingSkill(models.Model):

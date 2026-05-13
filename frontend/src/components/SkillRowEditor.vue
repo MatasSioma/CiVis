@@ -2,17 +2,19 @@
 const skill = defineModel<{
   name: string;
   type: 'hard' | 'soft' | 'experience';
-  years_of_experience: number;
+  description: string;
 }>({ required: true });
 
 withDefaults(
   defineProps<{
     hideType?: boolean;
     namePlaceholder?: string;
+    descriptionPlaceholder?: string;
   }>(),
   {
     hideType: false,
     namePlaceholder: 'pvz. python',
+    descriptionPlaceholder: 'trumpas aprašymas (neprivaloma)',
   },
 );
 
@@ -24,7 +26,7 @@ defineEmits<{
 <template>
   <div
     class="flex items-end gap-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-    <label class="block flex-1">
+    <label class="block w-48 shrink-0">
       <span class="text-sm font-medium text-gray-700">Pavadinimas</span>
       <input
         v-model="skill.name"
@@ -45,16 +47,13 @@ defineEmits<{
       </select>
     </label>
 
-    <label class="block w-28">
-      <span class="text-sm font-medium text-gray-700">Metai</span>
+    <label class="block flex-1">
+      <span class="text-sm font-medium text-gray-700">Aprašymas</span>
       <input
-        v-model.number="skill.years_of_experience"
+        v-model="skill.description"
         class="focus:border-secondary focus:ring-secondary/40 mt-1 h-11 w-full rounded-md border border-gray-300 bg-white px-3 text-gray-950 transition outline-none placeholder:text-gray-400 focus:ring-2"
-        min="0"
-        placeholder="0"
-        required
-        step="1"
-        type="number" />
+        :placeholder="descriptionPlaceholder"
+        type="text" />
     </label>
 
     <button

@@ -13,27 +13,34 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CV, Application, Company, Industry, JobPosting, JobPostingSkill, Skill, User
 from rest_framework.parsers import MultiPartParser
-from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from .embeddings import EmbeddingError, generate_embeddings
 from .extraction import extract_skills_from_text
-from .models import CV, Application, Company, CVSkill, JobPosting, PendingCVPayment, Skill, User
+from .models import (
+	CV,
+	Application,
+	Company,
+	CVSkill,
+	Industry,
+	JobPosting,
+	JobPostingSkill,
+	PendingCVPayment,
+	User,
+)
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
 	CompanySerializer,
 	CVDetailSerializer,
-	CVSerializer,
+	CVSubmitSerializer,
 	IndustrySerializer,
 	JobPostingListSerializer,
-	CVSubmitSerializer,
 	JobPostingSerializer,
 	LoginSerializer,
 	SignupSerializer,
-	SkillSerializer,
 	UserSerializer,
+	skill_embed_text,
 )
 from .storage import upload_cv
 
@@ -151,32 +158,43 @@ class CVUploadView(APIView):
 
 
 def create_cv_for_user(user, file_key, skills_data):
-	CV.objects.filter(user=user).delete()
-	cv = CV.objects.create(user=user, file_key=file_key)
+	prepared = []
+
 	for skill_data in skills_data:
-		skill_name = skill_data['name'].strip().lower()
-		skill, _ = Skill.objects.get_or_create(name=skill_name)
-		CVSkill.objects.create(
-			cv=cv,
-			skill=skill,
-			type=skill_data['type'],
-			years_of_experience=skill_data['years_of_experience'],
+		name = skill_data['name'].strip()
+		skill_type = skill_data['type']
+		description = (skill_data.get('description') or '').strip()
+		prepared.append(
+			{
+				'name': name,
+				'type': skill_type,
+				'description': description,
+				'embed_text': skill_embed_text(name, skill_type, description),
+			}
 		)
+
+	try:
+		embeddings = generate_embeddings([r['embed_text'] for r in prepared]) if prepared else []
+	except EmbeddingError as exc:
+		raise ValidationError({'skills': f'Nepavyko sugeneruoti embeddingų: {exc}'}) from exc
+
+	with transaction.atomic():
+		CV.objects.filter(user=user).delete()
+		cv = CV.objects.create(user=user, file_key=file_key)
+		CVSkill.objects.bulk_create(
+			[
+				CVSkill(
+					cv=cv,
+					name=row['name'],
+					type=row['type'],
+					description=row['description'],
+					embedding=embedding,
+				)
+				for row, embedding in zip(prepared, embeddings)
+			]
+		)
+
 	return cv
-
-
-class CVSubmitView(APIView):
-	permission_classes = [IsJobSeeker]
-
-	def post(self, request):
-		serializer = CVSubmitSerializer(data=request.data)
-		serializer.is_valid(raise_exception=True)
-		cv = create_cv_for_user(
-			request.user,
-			serializer.validated_data['file_key'],
-			serializer.validated_data['skills'],
-		)
-		return Response(CVSerializer(cv).data, status=status.HTTP_201_CREATED)
 
 
 class CVCheckoutView(APIView):
@@ -193,7 +211,10 @@ class CVCheckoutView(APIView):
 			payment_method_types=['card'],
 			line_items=[{'price': django_settings.STRIPE_PRICE_ID, 'quantity': 1}],
 			mode='payment',
-			success_url=f'{django_settings.FRONTEND_URL}/candidate/my-cv?payment=success',
+			success_url=(
+				f'{django_settings.FRONTEND_URL}/candidate/my-cv'
+				'?payment=success&session_id={CHECKOUT_SESSION_ID}'
+			),
 			cancel_url=f'{django_settings.FRONTEND_URL}/candidate/upload-cv?payment=cancelled',
 			client_reference_id=str(request.user.id),
 		)
@@ -227,17 +248,79 @@ class StripeWebhookView(APIView):
 
 		if event['type'] == 'checkout.session.completed':
 			session_data = event['data']['object']
-			try:
-				pending = PendingCVPayment.objects.select_related('user').get(
-					stripe_session_id=session_data['id']
-				)
-			except PendingCVPayment.DoesNotExist:
-				return Response(status=status.HTTP_200_OK)
-
-			create_cv_for_user(pending.user, pending.file_key, pending.skills_data)
-			pending.delete()
+			_finalize_pending_payment(session_data['id'])
 
 		return Response(status=status.HTTP_200_OK)
+
+
+def _finalize_pending_payment(session_id):
+	"""Idempotently convert a PendingCVPayment into a CV. Returns the CV, or
+	None if there's no pending payment for this session id."""
+	with transaction.atomic():
+		try:
+			pending = (
+				PendingCVPayment.objects
+				.select_for_update()
+				.select_related('user')
+				.get(stripe_session_id=session_id)
+			)
+		except PendingCVPayment.DoesNotExist:
+			return None
+
+		cv = create_cv_for_user(pending.user, pending.file_key, pending.skills_data)
+		pending.delete()
+
+	return cv
+
+
+class CVFinalizeView(APIView):
+	"""Frontend hits this on return from Stripe checkout so the CV is saved
+	even when the Stripe webhook can't reach the server (local dev). Safe to
+	race with the webhook — whichever finds the PendingCVPayment row first
+	wins, the other becomes a no-op."""
+
+	permission_classes = [IsJobSeeker]
+
+	def post(self, request):
+		session_id = (request.data.get('session_id') or '').strip()
+
+		if not session_id:
+			return Response(
+				{'session_id': ['Privaloma.']},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		pending = PendingCVPayment.objects.filter(
+			user=request.user, stripe_session_id=session_id
+		).first()
+
+		if pending is None:
+			# Webhook already finalized (or there was no pending payment for this
+			# user). Return existing CV if any.
+			try:
+				cv = CV.objects.get(user=request.user)
+				return Response(CVDetailSerializer(cv).data)
+			except CV.DoesNotExist:
+				return Response(
+					{'detail': 'CV nerastas.'},
+					status=status.HTTP_404_NOT_FOUND,
+				)
+
+		session = stripe.checkout.Session.retrieve(session_id)
+
+		if session.payment_status != 'paid':
+			return Response(
+				{'detail': 'Mokėjimas dar nepatvirtintas.'},
+				status=status.HTTP_402_PAYMENT_REQUIRED,
+			)
+
+		cv = _finalize_pending_payment(session_id)
+
+		if cv is None:
+			# Webhook beat us to it after our initial check.
+			cv = CV.objects.get(user=request.user)
+
+		return Response(CVDetailSerializer(cv).data)
 
 
 class CVMeView(APIView):
@@ -245,13 +328,24 @@ class CVMeView(APIView):
 
 	def get(self, request):
 		try:
-			cv = CV.objects.prefetch_related('cvskill_set__skill').get(user=request.user)
+			cv = CV.objects.prefetch_related('cvskill_set').get(user=request.user)
 		except CV.DoesNotExist:
 			return Response(
 				{'detail': 'CV nerastas.'},
 				status=status.HTTP_404_NOT_FOUND,
 			)
 		return Response(CVDetailSerializer(cv).data)
+
+	def delete(self, request):
+		deleted, _ = CV.objects.filter(user=request.user).delete()
+
+		if not deleted:
+			return Response(
+				{'detail': 'CV nerastas.'},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -285,25 +379,6 @@ class IndustryViewSet(viewsets.ModelViewSet):
 			IndustrySerializer(industry).data,
 			status=status.HTTP_201_CREATED,
 		)
-
-
-class SkillViewSet(viewsets.ModelViewSet):
-	queryset = Skill.objects.all().order_by('name')
-	serializer_class = SkillSerializer
-	permission_classes = [IsEmployerForWrite]
-	pagination_class = None
-
-
-class CVViewSet(viewsets.ModelViewSet):
-	queryset = CV.objects.all().order_by('-created_at')
-	serializer_class = CVSerializer
-	permission_classes = [IsJobSeeker]
-
-	def get_queryset(self):
-		return CV.objects.filter(user=self.request.user).order_by('-created_at')
-
-	def perform_create(self, serializer):
-		serializer.save(user=self.request.user)
 
 
 class JobPostingViewSet(viewsets.ModelViewSet):

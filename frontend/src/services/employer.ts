@@ -41,11 +41,6 @@ export interface Industry {
   name: string;
 }
 
-export interface Skill {
-  id: string;
-  name: string;
-}
-
 export type SkillType = 'hard' | 'soft' | 'experience';
 export type JobType =
   | 'full_time'
@@ -155,13 +150,6 @@ export const industryApi = {
       method: 'POST',
       body: { name },
     }),
-};
-
-export const skillApi = {
-  async list(): Promise<Skill[]> {
-    const data = await apiRequest<Paginated<Skill> | Skill[]>('/skills/');
-    return isPaginated<Skill>(data) ? data.results : data;
-  },
 };
 
 export const jobPostingApi = {

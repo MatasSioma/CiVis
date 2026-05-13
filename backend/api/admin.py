@@ -10,7 +10,6 @@ from .models import (
 	JobPosting,
 	JobPostingSkill,
 	PendingCVPayment,
-	Skill,
 	User,
 )
 
@@ -48,16 +47,10 @@ class IndustryAdmin(admin.ModelAdmin):
 	search_fields = ('name',)
 
 
-@admin.register(Skill)
-class SkillAdmin(admin.ModelAdmin):
-	list_display = ('name',)
-	search_fields = ('name',)
-
-
 class CVSkillInline(admin.TabularInline):
 	model = CVSkill
 	extra = 0
-	autocomplete_fields = ('skill',)
+	fields = ('name', 'type', 'description')
 
 
 @admin.register(CV)
@@ -94,10 +87,10 @@ class ApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(CVSkill)
 class CVSkillAdmin(admin.ModelAdmin):
-	list_display = ('cv', 'skill', 'type')
+	list_display = ('cv', 'name', 'type')
 	list_filter = ('type',)
-	search_fields = ('cv__user__username', 'skill__name', 'description')
-	autocomplete_fields = ('cv', 'skill')
+	search_fields = ('cv__user__username', 'name', 'description')
+	autocomplete_fields = ('cv',)
 
 
 @admin.register(PendingCVPayment)

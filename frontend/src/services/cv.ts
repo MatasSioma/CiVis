@@ -3,7 +3,7 @@ import { apiRequest } from './api';
 export interface ExtractedSkill {
   name: string;
   type: 'hard' | 'soft' | 'experience';
-  years_of_experience: number;
+  description: string;
 }
 
 export interface UploadResponse {
@@ -16,19 +16,10 @@ export interface SubmitPayload {
   skills: ExtractedSkill[];
 }
 
-export interface CVResponse {
-  id: string;
-  user: string;
-  file_key: string;
-  skills: { id: string; name: string }[];
-  created_at: string;
-  updated_at: string;
-}
-
 export interface CVDetailSkill {
   name: string;
   type: 'hard' | 'soft' | 'experience';
-  years_of_experience: number;
+  description: string;
 }
 
 export interface CVDetailResponse {
@@ -48,15 +39,19 @@ export const cvApi = {
       body: formData,
     });
   },
-  submit: (payload: SubmitPayload) =>
-    apiRequest<CVResponse>('/cv/submit/', {
-      method: 'POST',
-      body: payload,
-    }),
   getMyCV: () => apiRequest<CVDetailResponse>('/cv/me/'),
+  deleteMyCV: () =>
+    apiRequest<void>('/cv/me/', {
+      method: 'DELETE',
+    }),
   checkout: (payload: SubmitPayload) =>
     apiRequest<{ checkout_url: string }>('/cv/checkout/', {
       method: 'POST',
       body: payload,
+    }),
+  finalize: (sessionId: string) =>
+    apiRequest<CVDetailResponse>('/cv/finalize/', {
+      method: 'POST',
+      body: { session_id: sessionId },
     }),
 };
