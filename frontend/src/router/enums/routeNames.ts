@@ -13,6 +13,8 @@ export const ROUTE_NAMES = {
   UPLOAD_CV: 'UploadCV',
   MY_CV: 'MyCV',
   CANDIDATE_JOB_POSTING: 'CandidateJobPosting',
+  EMPLOYER_APPLICANTS: 'EmployerApplicants',
+  EMPLOYER_APPLICATION_DETAIL: 'EmployerApplicationDetail',
 } as const;
 
 export type RouteNamesValues = ObjectValues<typeof ROUTE_NAMES>;

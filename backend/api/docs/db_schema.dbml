@@ -83,7 +83,7 @@ TABLE applications {
   applicant uuid [not null, ref: > users.id]
   cv uuid [not null, ref: > cvs.id]
   match_score smallint [not null, note: '0-100']
-  status varchar(16) [not null, default: 'pending', note: 'CHECK: pending, reviewed, rejected, accepted']
+  status varchar(16) [not null, default: 'pending', note: 'CHECK: pending, rejected, accepted']
   created_at timestamptz [default: `now()`]
   updated_at timestamptz [default: `now()`]
 

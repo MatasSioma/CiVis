@@ -8,6 +8,7 @@ import { cvApi } from '@/services/cv';
 import { ApiError } from '@/services/api';
 import DashboardCard from '@/components/DashboardCard.vue';
 import {
+  APPLICATION_STATUS_LABELS,
   JOB_TYPE_LABELS,
   WORKPLACE_TYPE_LABELS,
   type JobType,
@@ -342,6 +343,12 @@ function matchScoreColorClasses(score: number): string {
   return 'bg-red-100 text-red-700';
 }
 
+function applicationStatusClasses(status: CandidateApplication['status']): string {
+  if (status === 'accepted') return 'bg-primary text-attention';
+  if (status === 'rejected') return 'bg-red-100 text-red-700';
+  return 'bg-gray-100 text-gray-700';
+}
+
 function workplaceLabel(posting: CandidateJobPosting): string {
   if (posting.workplace_type === 'remote') {
     return WORKPLACE_TYPE_LABELS.remote;
@@ -479,6 +486,7 @@ onMounted(async () => {
             <div class="mt-1 flex items-center justify-between gap-2">
               <p class="text-xs text-gray-500">{{ application.company_name }}</p>
               <button
+                v-if="application.status === 'pending'"
                 class="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
                 :disabled="cancellingApplicationId === application.id"
                 type="button"
@@ -489,6 +497,12 @@ onMounted(async () => {
                     : 'Atšaukti'
                 }}
               </button>
+              <span
+                v-else
+                class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                :class="applicationStatusClasses(application.status)">
+                {{ APPLICATION_STATUS_LABELS[application.status] }}
+              </span>
             </div>
           </li>
         </ul>

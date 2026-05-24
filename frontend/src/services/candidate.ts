@@ -108,7 +108,7 @@ export const candidatePostingApi = {
     }),
 };
 
-export type ApplicationStatus = 'pending' | 'reviewed' | 'rejected' | 'accepted';
+export type ApplicationStatus = 'pending' | 'rejected' | 'accepted';
 
 export interface CandidateApplication {
   id: string;

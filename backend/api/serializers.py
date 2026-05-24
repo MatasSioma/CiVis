@@ -461,6 +461,84 @@ class JobPostingSkillSerializer(serializers.ModelSerializer):
 		]
 
 
+class ApplicantBriefSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = User
+		fields = ['id', 'first_name', 'last_name', 'email', 'date_of_birth']
+		read_only_fields = fields
+
+
+class EmployerApplicantListSerializer(serializers.ModelSerializer):
+	applicant_id = serializers.UUIDField(source='applicant.id', read_only=True)
+	applicant_first_name = serializers.CharField(
+		source='applicant.first_name', read_only=True
+	)
+	applicant_last_name = serializers.CharField(
+		source='applicant.last_name', read_only=True
+	)
+	applicant_email = serializers.EmailField(source='applicant.email', read_only=True)
+
+	class Meta:
+		model = Application
+		fields = [
+			'id',
+			'applicant_id',
+			'applicant_first_name',
+			'applicant_last_name',
+			'applicant_email',
+			'match_score',
+			'status',
+			'created_at',
+		]
+		read_only_fields = [
+			'id',
+			'applicant_id',
+			'applicant_first_name',
+			'applicant_last_name',
+			'applicant_email',
+			'match_score',
+			'created_at',
+		]
+
+
+class EmployerApplicationDetailSerializer(serializers.ModelSerializer):
+	applicant = ApplicantBriefSerializer(read_only=True)
+	cv = CVDetailSerializer(read_only=True)
+	job_posting_id = serializers.UUIDField(source='job_posting.id', read_only=True)
+	job_posting_title = serializers.CharField(
+		source='job_posting.title', read_only=True
+	)
+	company_name = serializers.CharField(
+		source='job_posting.company.name', read_only=True
+	)
+
+	class Meta:
+		model = Application
+		fields = [
+			'id',
+			'job_posting_id',
+			'job_posting_title',
+			'company_name',
+			'applicant',
+			'cv',
+			'match_score',
+			'status',
+			'created_at',
+			'updated_at',
+		]
+		read_only_fields = [
+			'id',
+			'job_posting_id',
+			'job_posting_title',
+			'company_name',
+			'applicant',
+			'cv',
+			'match_score',
+			'created_at',
+			'updated_at',
+		]
+
+
 class PublicJobPostingListSerializer(serializers.ModelSerializer):
 	"""Guest-facing posting list — no match score, no application state."""
 

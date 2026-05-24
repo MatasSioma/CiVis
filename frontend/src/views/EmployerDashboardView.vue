@@ -242,6 +242,10 @@ function openPosting(id: string) {
   router.push({ name: ROUTE_NAMES.EMPLOYER_JOB_POSTING_EDIT, params: { id } });
 }
 
+function goToApplicants(id: string) {
+  router.push({ name: ROUTE_NAMES.EMPLOYER_APPLICANTS, params: { id } });
+}
+
 function goToNewPosting() {
   router.push({ name: ROUTE_NAMES.EMPLOYER_JOB_POSTING_NEW });
 }
@@ -713,7 +717,34 @@ onMounted(() => {
               <td class="py-3 pr-3 text-gray-700">
                 {{ formatSalary(posting.salary_min, posting.salary_max) }}
               </td>
-              <td class="py-3 pr-3 text-gray-700">{{ posting.applicant_count }}</td>
+              <td class="py-3 pr-3 text-gray-700">
+                <div class="flex items-center gap-2">
+                  <span>{{ posting.applicant_count }}</span>
+                  <button
+                    v-if="posting.applicant_count > 0"
+                    class="rounded-md p-1 text-attention transition hover:bg-primary/40"
+                    type="button"
+                    :title="`Peržiūrėti kandidatus (${posting.applicant_count})`"
+                    @click.stop="goToApplicants(posting.id)">
+                    <svg
+                      class="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .644C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                      <path
+                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                        stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
               <td class="py-3 pr-3 text-gray-700">{{ formatDate(posting.created_at) }}</td>
               <td class="py-3 text-right">
                 <div class="flex justify-end gap-2">

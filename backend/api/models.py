@@ -145,7 +145,6 @@ class JobPosting(models.Model):
 class Application(models.Model):
 	class Status(models.TextChoices):
 		PENDING = 'pending', 'Pending'
-		REVIEWED = 'reviewed', 'Reviewed'
 		REJECTED = 'rejected', 'Rejected'
 		ACCEPTED = 'accepted', 'Accepted'
 

@@ -227,3 +227,76 @@ export const JOB_POSTING_ORDERING_OPTIONS: {
 ];
 
 export const DEFAULT_JOB_POSTING_ORDERING: JobPostingOrdering = '-created_at';
+
+export type ApplicationStatus = 'pending' | 'rejected' | 'accepted';
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  pending: 'Laukia peržiūros',
+  rejected: 'Atmesta',
+  accepted: 'Priimta',
+};
+
+export const APPLICATION_STATUS_VALUES: ApplicationStatus[] = [
+  'pending',
+  'rejected',
+  'accepted',
+];
+
+export interface EmployerApplicantListItem {
+  id: string;
+  applicant_id: string;
+  applicant_first_name: string;
+  applicant_last_name: string;
+  applicant_email: string;
+  match_score: number;
+  status: ApplicationStatus;
+  created_at: string;
+}
+
+export interface EmployerApplicationDetail {
+  id: string;
+  job_posting_id: string;
+  job_posting_title: string;
+  company_name: string;
+  applicant: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    date_of_birth: string | null;
+  };
+  cv: {
+    id: string;
+    file_key: string;
+    skills: {
+      name: string;
+      type: SkillType;
+      description: string;
+    }[];
+    created_at: string;
+    updated_at: string;
+  } | null;
+  match_score: number;
+  status: ApplicationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export const employerApplicationApi = {
+  list: (jobPostingId: string, page = 1) => {
+    const params = new URLSearchParams({
+      job_posting: jobPostingId,
+      page: String(page),
+    });
+    return apiRequest<Paginated<EmployerApplicantListItem>>(
+      `/applications/?${params.toString()}`,
+    );
+  },
+  get: (id: string) =>
+    apiRequest<EmployerApplicationDetail>(`/applications/${id}/`),
+  updateStatus: (id: string, status: ApplicationStatus) =>
+    apiRequest<EmployerApplicantListItem>(`/applications/${id}/`, {
+      method: 'PATCH',
+      body: { status },
+    }),
+};

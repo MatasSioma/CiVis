@@ -34,7 +34,7 @@ from .models import (
 	PendingCVPayment,
 	User,
 )
-from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
+from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker
 from .serializers import (
 	ApplicationSerializer,
 	CandidateJobPostingDetailSerializer,
@@ -42,6 +42,8 @@ from .serializers import (
 	CompanySerializer,
 	CVDetailSerializer,
 	CVSubmitSerializer,
+	EmployerApplicantListSerializer,
+	EmployerApplicationDetailSerializer,
 	IndustrySerializer,
 	JobPostingListSerializer,
 	JobPostingSerializer,
@@ -475,15 +477,47 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 class ApplicationViewSet(viewsets.ModelViewSet):
 	queryset = Application.objects.all().order_by('-created_at')
 	serializer_class = ApplicationSerializer
-	permission_classes = [IsJobSeekerForWrite]
+
+	def get_permissions(self):
+		if self.action in {'create', 'destroy'}:
+			return [IsJobSeeker()]
+		if self.action in {'update', 'partial_update'}:
+			return [IsEmployer()]
+		return [permissions.IsAuthenticated()]
 
 	def get_queryset(self):
-		if self.request.user.role == User.Role.EMPLOYER:
-			return Application.objects.filter(
-				job_posting__company__owner=self.request.user
-			).order_by('-created_at')
+		user = self.request.user
 
-		return Application.objects.filter(applicant=self.request.user).order_by('-created_at')
+		if user.role == User.Role.EMPLOYER:
+			queryset = Application.objects.filter(
+				job_posting__company__owner=user
+			).select_related(
+				'applicant',
+				'cv',
+				'job_posting',
+				'job_posting__company',
+			)
+		else:
+			queryset = Application.objects.filter(applicant=user)
+
+		job_posting = self.request.query_params.get('job_posting')
+		if job_posting:
+			queryset = queryset.filter(job_posting=job_posting)
+
+		return queryset.order_by('-created_at')
+
+	def get_serializer_class(self):
+		user = self.request.user
+
+		if user.is_authenticated and user.role == User.Role.EMPLOYER:
+			if self.action == 'list':
+				return EmployerApplicantListSerializer
+			if self.action == 'retrieve':
+				return EmployerApplicationDetailSerializer
+			if self.action in {'update', 'partial_update'}:
+				return EmployerApplicantListSerializer
+
+		return ApplicationSerializer
 
 	def perform_create(self, serializer):
 		cv = CV.objects.filter(user=self.request.user).first()
