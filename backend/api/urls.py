@@ -3,6 +3,8 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
 	ApplicationViewSet,
+	CandidateJobPostingDetailView,
+	CandidateJobPostingListView,
 	CompanyViewSet,
 	CVCheckoutView,
 	CVFinalizeView,
@@ -12,6 +14,7 @@ from .views import (
 	JobPostingViewSet,
 	LoginView,
 	LogoutView,
+	PublicJobPostingListView,
 	SessionView,
 	SignupView,
 	StripeWebhookView,
@@ -33,5 +36,20 @@ urlpatterns = [
 	path('cv/checkout/', CVCheckoutView.as_view(), name='cv-checkout'),
 	path('cv/finalize/', CVFinalizeView.as_view(), name='cv-finalize'),
 	path('stripe/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
+	path(
+		'candidate/job-postings/',
+		CandidateJobPostingListView.as_view(),
+		name='candidate-job-postings',
+	),
+	path(
+		'candidate/job-postings/<uuid:pk>/',
+		CandidateJobPostingDetailView.as_view(),
+		name='candidate-job-posting-detail',
+	),
+	path(
+		'public/job-postings/',
+		PublicJobPostingListView.as_view(),
+		name='public-job-postings',
+	),
 	path('', include(router.urls)),
 ]

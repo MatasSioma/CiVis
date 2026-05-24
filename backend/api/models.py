@@ -243,3 +243,31 @@ class JobPostingSkill(models.Model):
 
 	def __str__(self):
 		return f'{self.job_posting} - {self.name}'
+
+
+class MatchScore(models.Model):
+	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	job_posting = models.ForeignKey(
+		JobPosting, on_delete=models.CASCADE, related_name='match_scores'
+	)
+	cv = models.ForeignKey(CV, on_delete=models.CASCADE, related_name='match_scores')
+	score = models.SmallIntegerField()
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		constraints = [
+			models.UniqueConstraint(
+				fields=['job_posting', 'cv'], name='match_score_unique'
+			),
+			models.CheckConstraint(
+				condition=models.Q(score__gte=0) & models.Q(score__lte=100),
+				name='match_score_value_range',
+			),
+		]
+		indexes = [
+			models.Index(fields=['cv', '-score'], name='idx_match_score_cv_score'),
+		]
+
+	def __str__(self):
+		return f'MatchScore({self.cv}, {self.job_posting}) = {self.score}'

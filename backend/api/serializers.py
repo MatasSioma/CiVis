@@ -4,6 +4,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .embeddings import EmbeddingError, generate_embeddings
+from .matching import recompute_scores_for_posting
 from .models import (
 	CV,
 	Application,
@@ -364,31 +365,42 @@ class JobPostingSerializer(serializers.ModelSerializer):
 				JobPostingSkill.objects.bulk_create(
 					self._build_skill_rows(instance, prepared, embeddings)
 				)
+				recompute_scores_for_posting(instance)
 
 		return instance
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
-	def validate_cv(self, cv):
-		request = self.context.get('request')
-
-		if request and cv.user_id != request.user.id:
-			raise serializers.ValidationError('Galite naudoti tik savo CV.')
-
-		return cv
+	job_posting_title = serializers.CharField(source='job_posting.title', read_only=True)
+	company_name = serializers.CharField(
+		source='job_posting.company.name', read_only=True
+	)
 
 	class Meta:
 		model = Application
 		fields = [
 			'id',
 			'job_posting',
+			'job_posting_title',
+			'company_name',
 			'applicant',
 			'cv',
 			'match_score',
+			'status',
 			'created_at',
 			'updated_at',
 		]
-		read_only_fields = ['id', 'applicant', 'created_at', 'updated_at']
+		read_only_fields = [
+			'id',
+			'job_posting_title',
+			'company_name',
+			'applicant',
+			'cv',
+			'match_score',
+			'status',
+			'created_at',
+			'updated_at',
+		]
 
 
 class CVSkillReadSerializer(serializers.ModelSerializer):
@@ -447,3 +459,100 @@ class JobPostingSkillSerializer(serializers.ModelSerializer):
 			'description',
 			'is_required',
 		]
+
+
+class PublicJobPostingListSerializer(serializers.ModelSerializer):
+	"""Guest-facing posting list — no match score, no application state."""
+
+	company_name = serializers.CharField(source='company.name', read_only=True)
+
+	class Meta:
+		model = JobPosting
+		fields = [
+			'id',
+			'title',
+			'company_name',
+			'job_type',
+			'workplace_type',
+			'location',
+			'salary_min',
+			'salary_max',
+			'updated_at',
+		]
+		read_only_fields = fields
+
+
+class CandidateJobPostingListSerializer(serializers.ModelSerializer):
+	company_name = serializers.CharField(source='company.name', read_only=True)
+	match_score = serializers.IntegerField(read_only=True, default=0)
+	has_applied = serializers.BooleanField(read_only=True, default=False)
+
+	class Meta:
+		model = JobPosting
+		fields = [
+			'id',
+			'title',
+			'company_name',
+			'job_type',
+			'workplace_type',
+			'location',
+			'salary_min',
+			'salary_max',
+			'updated_at',
+			'match_score',
+			'has_applied',
+		]
+		read_only_fields = fields
+
+
+class CandidateCompanySerializer(serializers.ModelSerializer):
+	"""Company info exposed to candidates on the job-posting detail view."""
+
+	class Meta:
+		model = Company
+		fields = [
+			'id',
+			'name',
+			'description',
+			'registration_code',
+			'address',
+			'contact_email',
+			'contact_phone',
+			'website',
+			'date_established',
+		]
+		read_only_fields = fields
+
+
+class CandidateJobPostingDetailSerializer(serializers.ModelSerializer):
+	company = CandidateCompanySerializer(read_only=True)
+	industry_name = serializers.CharField(source='industry.name', read_only=True)
+	skills = JobPostingSkillReadSerializer(
+		source='jobpostingskill_set', many=True, read_only=True
+	)
+	match_score = serializers.IntegerField(read_only=True, default=0)
+	has_applied = serializers.BooleanField(read_only=True, default=False)
+	application_id = serializers.UUIDField(read_only=True, allow_null=True)
+
+	class Meta:
+		model = JobPosting
+		fields = [
+			'id',
+			'title',
+			'description',
+			'company',
+			'industry_name',
+			'job_type',
+			'workplace_type',
+			'location',
+			'salary_min',
+			'salary_max',
+			'status',
+			'skills',
+			'match_score',
+			'has_applied',
+			'application_id',
+			'created_at',
+			'updated_at',
+		]
+		read_only_fields = fields

@@ -12,6 +12,7 @@ export const ROUTE_PATHS = {
   GATEWAY: 'gateway',
   UPLOAD_CV: 'candidate/upload-cv',
   MY_CV: 'candidate/my-cv',
+  CANDIDATE_JOB_POSTING: 'candidate/job-postings/:id',
 } as const;
 
 export type RoutePathsValues = ObjectValues<typeof ROUTE_PATHS>;

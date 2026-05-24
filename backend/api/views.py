@@ -2,7 +2,8 @@ import stripe
 from django.conf import settings as django_settings
 from django.contrib.auth import login, logout
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from pypdf import PdfReader
@@ -10,6 +11,9 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.exceptions import NotFound
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,6 +21,7 @@ from rest_framework.parsers import MultiPartParser
 
 from .embeddings import EmbeddingError, generate_embeddings
 from .extraction import extract_skills_from_text
+from .matching import compute_match_score
 from .models import (
 	CV,
 	Application,
@@ -25,12 +30,15 @@ from .models import (
 	Industry,
 	JobPosting,
 	JobPostingSkill,
+	MatchScore,
 	PendingCVPayment,
 	User,
 )
 from .permissions import IsEmployer, IsEmployerForWrite, IsJobSeeker, IsJobSeekerForWrite
 from .serializers import (
 	ApplicationSerializer,
+	CandidateJobPostingDetailSerializer,
+	CandidateJobPostingListSerializer,
 	CompanySerializer,
 	CVDetailSerializer,
 	CVSubmitSerializer,
@@ -38,6 +46,7 @@ from .serializers import (
 	JobPostingListSerializer,
 	JobPostingSerializer,
 	LoginSerializer,
+	PublicJobPostingListSerializer,
 	SignupSerializer,
 	UserSerializer,
 	skill_embed_text,
@@ -477,4 +486,205 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 		return Application.objects.filter(applicant=self.request.user).order_by('-created_at')
 
 	def perform_create(self, serializer):
-		serializer.save(applicant=self.request.user)
+		cv = CV.objects.filter(user=self.request.user).first()
+
+		if cv is None:
+			raise ValidationError({'cv': 'Pirmiausia įkelkite CV.'})
+
+		job_posting = serializer.validated_data['job_posting']
+		match = MatchScore.objects.filter(cv=cv, job_posting=job_posting).first()
+		serializer.save(
+			applicant=self.request.user,
+			cv=cv,
+			match_score=match.score if match else 0,
+		)
+
+
+class CandidatePostingPagination(PageNumberPagination):
+	page_size = 20
+
+
+class PublicJobPostingListView(ListAPIView):
+	permission_classes = [permissions.AllowAny]
+	authentication_classes = []
+	serializer_class = PublicJobPostingListSerializer
+	pagination_class = CandidatePostingPagination
+	filter_backends = [SearchFilter, OrderingFilter]
+	search_fields = ['title']
+	ordering_fields = ['updated_at', 'salary_max', 'title']
+	ordering = ['-updated_at']
+
+	def get_queryset(self):
+		queryset = JobPosting.objects.filter(
+			status=JobPosting.Status.OPEN
+		).select_related('company')
+
+		params = self.request.query_params
+
+		job_type = params.get('job_type')
+		if job_type:
+			queryset = queryset.filter(job_type=job_type)
+
+		workplace_type = params.get('workplace_type')
+		if workplace_type:
+			queryset = queryset.filter(workplace_type=workplace_type)
+
+		location = params.get('location')
+		if location:
+			queryset = queryset.filter(location__icontains=location)
+
+		min_salary = params.get('min_salary')
+		if min_salary:
+			try:
+				min_value = int(min_salary)
+			except ValueError:
+				min_value = None
+
+			if min_value is not None:
+				queryset = queryset.filter(
+					Q(salary_max__gte=min_value)
+					| (Q(salary_max__isnull=True) & Q(salary_min__gte=min_value))
+				)
+
+		return queryset
+
+
+class CandidateJobPostingListView(ListAPIView):
+	permission_classes = [IsJobSeeker]
+	serializer_class = CandidateJobPostingListSerializer
+	pagination_class = CandidatePostingPagination
+	filter_backends = [SearchFilter, OrderingFilter]
+	search_fields = ['title']
+	ordering_fields = ['match_score', 'updated_at', 'salary_max', 'title']
+	ordering = ['-match_score', '-updated_at']
+
+	def get_queryset(self):
+		user = self.request.user
+		cv = CV.objects.filter(user=user).first()
+
+		if cv is not None:
+			self._ensure_match_scores(cv)
+
+		queryset = JobPosting.objects.filter(
+			status=JobPosting.Status.OPEN
+		).select_related('company')
+
+		params = self.request.query_params
+
+		job_type = params.get('job_type')
+		if job_type:
+			queryset = queryset.filter(job_type=job_type)
+
+		workplace_type = params.get('workplace_type')
+		if workplace_type:
+			queryset = queryset.filter(workplace_type=workplace_type)
+
+		location = params.get('location')
+		if location:
+			queryset = queryset.filter(location__icontains=location)
+
+		min_salary = params.get('min_salary')
+		if min_salary:
+			try:
+				min_value = int(min_salary)
+			except ValueError:
+				min_value = None
+
+			if min_value is not None:
+				queryset = queryset.filter(
+					Q(salary_max__gte=min_value)
+					| (Q(salary_max__isnull=True) & Q(salary_min__gte=min_value))
+				)
+
+		if cv is not None:
+			queryset = queryset.annotate(
+				match_score=Coalesce(
+					Subquery(
+						MatchScore.objects.filter(
+							job_posting=OuterRef('pk'), cv=cv
+						).values('score')[:1]
+					),
+					Value(0),
+				),
+				has_applied=Exists(
+					Application.objects.filter(
+						job_posting=OuterRef('pk'), applicant=user
+					)
+				),
+			)
+		else:
+			queryset = queryset.annotate(
+				match_score=Value(0),
+				has_applied=Value(False),
+			)
+
+		return queryset
+
+	def _ensure_match_scores(self, cv):
+		existing_ids = set(
+			MatchScore.objects.filter(cv=cv).values_list('job_posting_id', flat=True)
+		)
+		missing = (
+			JobPosting.objects.filter(status=JobPosting.Status.OPEN)
+			.exclude(id__in=existing_ids)
+			.prefetch_related('jobpostingskill_set')
+		)
+		cv_skills = list(cv.cvskill_set.all())
+
+		rows = [
+			MatchScore(
+				cv=cv,
+				job_posting=posting,
+				score=compute_match_score(
+					list(posting.jobpostingskill_set.all()), cv_skills
+				),
+			)
+			for posting in missing
+		]
+
+		if rows:
+			MatchScore.objects.bulk_create(rows, ignore_conflicts=True)
+
+
+class CandidateJobPostingDetailView(RetrieveAPIView):
+	permission_classes = [IsJobSeeker]
+	serializer_class = CandidateJobPostingDetailSerializer
+
+	def get_object(self):
+		pk = self.kwargs['pk']
+		posting = (
+			JobPosting.objects.filter(pk=pk, status=JobPosting.Status.OPEN)
+			.select_related('company', 'industry')
+			.prefetch_related('jobpostingskill_set')
+			.first()
+		)
+
+		if posting is None:
+			raise NotFound('Skelbimas nerastas.')
+
+		user = self.request.user
+		cv = CV.objects.filter(user=user).first()
+
+		if cv is not None:
+			match = MatchScore.objects.filter(cv=cv, job_posting=posting).first()
+
+			if match is None:
+				score = compute_match_score(
+					list(posting.jobpostingskill_set.all()),
+					list(cv.cvskill_set.all()),
+				)
+				match, _ = MatchScore.objects.get_or_create(
+					cv=cv, job_posting=posting, defaults={'score': score}
+				)
+
+			posting.match_score = match.score
+		else:
+			posting.match_score = 0
+
+		application = Application.objects.filter(
+			job_posting=posting, applicant=user
+		).first()
+		posting.has_applied = application is not None
+		posting.application_id = application.id if application else None
+
+		return posting

@@ -50,4 +50,11 @@ export const mainLayoutRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/CandidateDashboardView/MyCVView.vue'),
     meta: { requiresAuth: true, roles: ['job_seeker'] },
   },
+  {
+    path: ROUTE_PATHS.CANDIDATE_JOB_POSTING,
+    name: ROUTE_NAMES.CANDIDATE_JOB_POSTING,
+    component: () =>
+      import('@/views/CandidateDashboardView/JobPostingDetailView.vue'),
+    meta: { requiresAuth: true, roles: ['job_seeker'] },
+  },
 ];
