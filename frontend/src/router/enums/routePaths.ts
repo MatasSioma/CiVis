@@ -15,6 +15,7 @@ export const ROUTE_PATHS = {
   CANDIDATE_JOB_POSTING: 'candidate/job-postings/:id',
   EMPLOYER_APPLICANTS: 'employer/job-postings/:id/applicants',
   EMPLOYER_APPLICATION_DETAIL: 'employer/job-postings/:postingId/applications/:id',
+  NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 
 export type RoutePathsValues = ObjectValues<typeof ROUTE_PATHS>;

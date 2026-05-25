@@ -9,15 +9,13 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from pypdf import PdfReader
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.exceptions import NotFound
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from rest_framework.parsers import MultiPartParser
 
 from .embeddings import EmbeddingError, generate_embeddings
 from .extraction import extract_skills_from_text
@@ -217,16 +215,17 @@ class CVCheckoutView(APIView):
 
 		file_key = serializer.validated_data['file_key']
 		skills_data = serializer.validated_data['skills']
+		frontend_url = django_settings.FRONTEND_URL.rstrip('/')
 
 		session = stripe.checkout.Session.create(
 			payment_method_types=['card'],
 			line_items=[{'price': django_settings.STRIPE_PRICE_ID, 'quantity': 1}],
 			mode='payment',
 			success_url=(
-				f'{django_settings.FRONTEND_URL}/candidate/my-cv'
+				f'{frontend_url}/candidate/my-cv'
 				'?payment=success&session_id={CHECKOUT_SESSION_ID}'
 			),
-			cancel_url=f'{django_settings.FRONTEND_URL}/candidate/upload-cv?payment=cancelled',
+			cancel_url=f'{frontend_url}/candidate/upload-cv?payment=cancelled',
 			client_reference_id=str(request.user.id),
 		)
 

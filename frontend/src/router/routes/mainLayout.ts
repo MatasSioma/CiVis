@@ -69,4 +69,9 @@ export const mainLayoutRoutes: RouteRecordRaw[] = [
     component: () => import('@/views/EmployerApplicationDetailView.vue'),
     meta: { requiresAuth: true, roles: ['employer'] },
   },
+  {
+    path: ROUTE_PATHS.NOT_FOUND,
+    name: ROUTE_NAMES.NOT_FOUND,
+    component: () => import('@/views/NotFoundView.vue'),
+  },
 ];

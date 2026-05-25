@@ -23,13 +23,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: MainLayout,
-      children: mainLayoutRoutes,
-    },
-    {
-      path: '/',
       component: AuthenticationLayout,
       children: authLayoutRoutes,
+    },
+    {
+      component: MainLayout,
+      path: '/',
+      children: mainLayoutRoutes,
     },
   ],
 });

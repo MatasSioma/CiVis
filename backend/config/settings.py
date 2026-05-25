@@ -104,7 +104,7 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = get_csv_env(
 	'CSRF_TRUSTED_ORIGINS',
-	'http://localhost:5173,http://127.0.0.1:5173',
+	'http://localhost:5173',
 )
 
 SESSION_COOKIE_HTTPONLY = True
