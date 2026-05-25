@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { ApiError } from '@/services/api';
@@ -17,9 +17,26 @@ const password = ref('');
 const passwordConfirm = ref('');
 const fieldError = ref('');
 
+if (import.meta.env.DEV) {
+  console.debug('[view] GatewayView setup');
+}
+
 onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] GatewayView mounted', {
+      hasFlow: gateway.hasFlow.value,
+      flow: gateway.state.flow,
+    });
+  }
+
   if (!gateway.hasFlow.value) {
     router.replace({ name: ROUTE_NAMES.LOGIN });
+  }
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] GatewayView beforeUnmount');
   }
 });
 

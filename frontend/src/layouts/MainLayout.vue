@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue';
 import StackedLayout from './StackedLayout.vue';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { useRouter } from 'vue-router';
@@ -13,6 +14,22 @@ const links = [
 const auth = useAuth();
 const router = useRouter();
 const { showToast } = useToasts();
+
+if (import.meta.env.DEV) {
+  console.debug('[layout] MainLayout setup');
+}
+
+onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[layout] MainLayout mounted');
+  }
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[layout] MainLayout beforeUnmount');
+  }
+});
 
 async function handleLogout() {
   try {

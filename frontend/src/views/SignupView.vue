@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import BrandLogo from '@/components/BrandLogo.vue';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
@@ -34,7 +34,15 @@ const roleOptions: { label: string; value: UserRole }[] = [
   { label: 'Darbdavys', value: 'employer' },
 ];
 
+if (import.meta.env.DEV) {
+  console.debug('[view] SignupView setup');
+}
+
 onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] SignupView mounted');
+  }
+
   if (gateway.state.flow === 'signup' && gateway.state.payload) {
     const payload = gateway.state.payload as GatewaySignupPayload;
     form.role = payload.role;
@@ -44,6 +52,12 @@ onMounted(() => {
     form.date_of_birth = payload.date_of_birth ?? '';
     form.company_name = payload.company_name ?? '';
     form.company_description = payload.company_description ?? '';
+  }
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] SignupView beforeUnmount');
   }
 });
 

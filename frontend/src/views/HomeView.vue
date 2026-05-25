@@ -34,6 +34,12 @@ const route = useRoute();
 const { showToast } = useToasts();
 
 watchEffect(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] HomeView auth redirect check', {
+      user: auth.state.user,
+    });
+  }
+
   if (auth.state.user) {
     router.replace({ name: dashboardRouteName(auth.state.user.role) });
   }
@@ -281,6 +287,10 @@ watch(
 );
 
 onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] HomeView mounted');
+  }
+
   syncFromRoute();
   void loadPostings(parsePage(route.query.page), filters.ordering, {
     search: filters.search,
@@ -311,6 +321,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] HomeView beforeUnmount');
+  }
+
   tableObserver?.disconnect();
   tableObserver = null;
 });

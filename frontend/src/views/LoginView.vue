@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import BrandLogo from '@/components/BrandLogo.vue';
 import { ROUTE_NAMES } from '@/router/enums/routeNames';
@@ -33,9 +33,23 @@ const signupRoute = computed(() => ({
   query: selectedRole.value ? { role: selectedRole.value } : undefined,
 }));
 
+if (import.meta.env.DEV) {
+  console.debug('[view] LoginView setup');
+}
+
 onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] LoginView mounted');
+  }
+
   if (gateway.state.flow === 'login' && gateway.state.payload) {
     selectedRole.value = gateway.state.payload.role;
+  }
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[view] LoginView beforeUnmount');
   }
 });
 

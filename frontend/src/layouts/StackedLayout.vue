@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import BrandLogo from '@/components/BrandLogo.vue';
 import { ROUTE_NAMES, type RouteNamesValues } from '@/router/enums/routeNames';
@@ -13,12 +13,28 @@ const { links } = defineProps<{
 
 const route = useRoute();
 
+if (import.meta.env.DEV) {
+  console.debug('[layout] StackedLayout setup');
+}
+
 const navigation = computed(() =>
   links.map((item) => ({
     ...item,
     isActive: route.name === item.name,
   })),
 );
+
+onMounted(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[layout] StackedLayout mounted');
+  }
+});
+
+onBeforeUnmount(() => {
+  if (import.meta.env.DEV) {
+    console.debug('[layout] StackedLayout beforeUnmount');
+  }
+});
 </script>
 
 <template>

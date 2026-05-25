@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from pypdf import PdfReader
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError, NotFound
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
@@ -222,8 +222,7 @@ class CVCheckoutView(APIView):
 			line_items=[{'price': django_settings.STRIPE_PRICE_ID, 'quantity': 1}],
 			mode='payment',
 			success_url=(
-				f'{frontend_url}/candidate/my-cv'
-				'?payment=success&session_id={CHECKOUT_SESSION_ID}'
+				f'{frontend_url}/candidate/my-cv?payment=success&session_id={{CHECKOUT_SESSION_ID}}'
 			),
 			cancel_url=f'{frontend_url}/candidate/upload-cv?payment=cancelled',
 			client_reference_id=str(request.user.id),
@@ -269,8 +268,7 @@ def _finalize_pending_payment(session_id):
 	with transaction.atomic():
 		try:
 			pending = (
-				PendingCVPayment.objects
-				.select_for_update()
+				PendingCVPayment.objects.select_for_update()
 				.select_related('user')
 				.get(stripe_session_id=session_id)
 			)
@@ -408,18 +406,13 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 	def get_queryset(self):
 		queryset = JobPosting.objects.all()
 
-		if (
-			self.request.user.is_authenticated
-			and self.request.user.role == User.Role.EMPLOYER
-		):
+		if self.request.user.is_authenticated and self.request.user.role == User.Role.EMPLOYER:
 			queryset = queryset.filter(company__owner=self.request.user)
 		else:
 			queryset = queryset.filter(status=JobPosting.Status.OPEN)
 
 		if self.action in {'retrieve', 'update', 'partial_update'}:
-			queryset = queryset.select_related('industry').prefetch_related(
-				'jobpostingskill_set'
-			)
+			queryset = queryset.select_related('industry').prefetch_related('jobpostingskill_set')
 		elif self.action == 'list':
 			queryset = queryset.select_related('industry').annotate(
 				applicant_count=Count('applications')
@@ -431,9 +424,7 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 		company = self.request.user.companies.first()
 
 		if company is None:
-			raise ValidationError(
-				{'company': 'Pirmiausia sukurkite įmonės profilį.'}
-			)
+			raise ValidationError({'company': 'Pirmiausia sukurkite įmonės profilį.'})
 
 		serializer.save(company=company)
 
@@ -488,9 +479,7 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 		user = self.request.user
 
 		if user.role == User.Role.EMPLOYER:
-			queryset = Application.objects.filter(
-				job_posting__company__owner=user
-			).select_related(
+			queryset = Application.objects.filter(job_posting__company__owner=user).select_related(
 				'applicant',
 				'cv',
 				'job_posting',
@@ -548,9 +537,9 @@ class PublicJobPostingListView(ListAPIView):
 	ordering = ['-updated_at']
 
 	def get_queryset(self):
-		queryset = JobPosting.objects.filter(
-			status=JobPosting.Status.OPEN
-		).select_related('company')
+		queryset = JobPosting.objects.filter(status=JobPosting.Status.OPEN).select_related(
+			'company'
+		)
 
 		params = self.request.query_params
 
@@ -598,9 +587,9 @@ class CandidateJobPostingListView(ListAPIView):
 		if cv is not None:
 			self._ensure_match_scores(cv)
 
-		queryset = JobPosting.objects.filter(
-			status=JobPosting.Status.OPEN
-		).select_related('company')
+		queryset = JobPosting.objects.filter(status=JobPosting.Status.OPEN).select_related(
+			'company'
+		)
 
 		params = self.request.query_params
 
@@ -633,16 +622,14 @@ class CandidateJobPostingListView(ListAPIView):
 			queryset = queryset.annotate(
 				match_score=Coalesce(
 					Subquery(
-						MatchScore.objects.filter(
-							job_posting=OuterRef('pk'), cv=cv
-						).values('score')[:1]
+						MatchScore.objects.filter(job_posting=OuterRef('pk'), cv=cv).values(
+							'score'
+						)[:1]
 					),
 					Value(0),
 				),
 				has_applied=Exists(
-					Application.objects.filter(
-						job_posting=OuterRef('pk'), applicant=user
-					)
+					Application.objects.filter(job_posting=OuterRef('pk'), applicant=user)
 				),
 			)
 		else:
@@ -668,9 +655,7 @@ class CandidateJobPostingListView(ListAPIView):
 			MatchScore(
 				cv=cv,
 				job_posting=posting,
-				score=compute_match_score(
-					list(posting.jobpostingskill_set.all()), cv_skills
-				),
+				score=compute_match_score(list(posting.jobpostingskill_set.all()), cv_skills),
 			)
 			for posting in missing
 		]
@@ -714,9 +699,7 @@ class CandidateJobPostingDetailView(RetrieveAPIView):
 		else:
 			posting.match_score = 0
 
-		application = Application.objects.filter(
-			job_posting=posting, applicant=user
-		).first()
+		application = Application.objects.filter(job_posting=posting, applicant=user).first()
 		posting.has_applied = application is not None
 		posting.application_id = application.id if application else None
 
