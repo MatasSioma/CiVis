@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { ApiError } from '@/services/api';
 import { cvApi } from '@/services/cv';
 import {
+  APPLICATION_STATUS_LABELS,
   JOB_TYPE_LABELS,
   SKILL_TYPE_LABELS,
   WORKPLACE_TYPE_LABELS,
@@ -295,12 +296,21 @@ onMounted(() => {
               Aplikuota ✓
             </span>
             <button
+              v-if="posting.application_status === 'pending'"
               class="rounded-md bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-60"
               :disabled="isCancelling"
               type="button"
               @click="cancelApplication">
               {{ isCancelling ? 'Atšaukiama...' : 'Atšaukti paraišką' }}
             </button>
+            <span
+              v-else-if="posting.application_status"
+              class="inline-block rounded-md px-3 py-1.5 text-sm font-semibold"
+              :class="posting.application_status === 'accepted'
+                ? 'bg-primary text-attention'
+                : 'bg-red-100 text-red-700'">
+              {{ APPLICATION_STATUS_LABELS[posting.application_status] }}
+            </span>
           </template>
           <template v-else>
             <button

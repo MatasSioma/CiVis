@@ -387,6 +387,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
 			'cv',
 			'match_score',
 			'status',
+			'is_archived',
 			'created_at',
 			'updated_at',
 		]
@@ -398,6 +399,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
 			'cv',
 			'match_score',
 			'status',
+			'is_archived',
 			'created_at',
 			'updated_at',
 		]
@@ -611,6 +613,7 @@ class CandidateJobPostingDetailSerializer(serializers.ModelSerializer):
 	match_score = serializers.IntegerField(read_only=True, default=0)
 	has_applied = serializers.BooleanField(read_only=True, default=False)
 	application_id = serializers.UUIDField(read_only=True, allow_null=True)
+	application_status = serializers.CharField(read_only=True, allow_null=True, default=None)
 
 	class Meta:
 		model = JobPosting
@@ -630,6 +633,7 @@ class CandidateJobPostingDetailSerializer(serializers.ModelSerializer):
 			'match_score',
 			'has_applied',
 			'application_id',
+			'application_status',
 			'created_at',
 			'updated_at',
 		]

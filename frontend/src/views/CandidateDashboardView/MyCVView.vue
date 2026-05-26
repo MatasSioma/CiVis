@@ -101,9 +101,21 @@ onMounted(async () => {
     showToast('Mokėjimas sėkmingas! CV išsaugotas.', 'success');
   }
 });
+
+function goBack() {
+  router.push({ name: ROUTE_NAMES.CANDIDATE_DASHBOARD });
+}
 </script>
 
 <template>
+  <section class="space-y-6">
+    <button
+      class="inline-flex items-center gap-1 text-sm font-semibold text-attention hover:underline"
+      type="button"
+      @click="goBack">
+      ← Grįžti į paskyrą
+    </button>
+
   <div class="flex justify-center py-8">
     <FormCard v-if="isLoading" max-width="max-w-3xl">
       <p class="text-center text-gray-500">Kraunama...</p>
@@ -206,4 +218,5 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+  </section>
 </template>

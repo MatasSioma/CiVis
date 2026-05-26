@@ -1,9 +1,11 @@
 import stripe
+from datetime import timedelta
 from django.conf import settings as django_settings
 from django.contrib.auth import login, logout
 from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Coalesce
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from pypdf import PdfReader
@@ -129,6 +131,17 @@ class CVUploadView(APIView):
 	parser_classes = [MultiPartParser]
 
 	def post(self, request):
+		existing_cv = CV.objects.filter(user=request.user).first()
+		if existing_cv:
+			cooldown = timedelta(weeks=2)
+			earliest_next_upload = existing_cv.created_at + cooldown
+			if timezone.now() < earliest_next_upload:
+				days_left = (earliest_next_upload - timezone.now()).days
+				return Response(
+					{'file': [f'Naują CV galėsite įkelti po {days_left} d.']},
+					status=status.HTTP_429_TOO_MANY_REQUESTS,
+				)
+
 		file = request.FILES.get('file')
 
 		if not file:
@@ -507,6 +520,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 
 		return ApplicationSerializer
 
+	def perform_destroy(self, instance):
+		if instance.status != Application.Status.PENDING:
+			raise ValidationError({'detail': 'Galima atšaukti tik laukiančias paraiškas.'})
+		instance.delete()
+
 	def perform_create(self, serializer):
 		cv = CV.objects.filter(user=self.request.user).first()
 
@@ -520,6 +538,19 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 			cv=cv,
 			match_score=match.score if match else 0,
 		)
+
+	@action(detail=True, methods=['post'], permission_classes=[IsJobSeeker])
+	def archive(self, request, pk=None):
+		application = self.get_object()
+		if application.status == Application.Status.PENDING:
+			return Response(
+				{'detail': 'Negalima archyvuoti aktyvios paraiškos.'},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		application.is_archived = True
+		application.save(update_fields=['is_archived'])
+		serializer = ApplicationSerializer(application)
+		return Response(serializer.data)
 
 
 class CandidatePostingPagination(PageNumberPagination):
@@ -702,5 +733,6 @@ class CandidateJobPostingDetailView(RetrieveAPIView):
 		application = Application.objects.filter(job_posting=posting, applicant=user).first()
 		posting.has_applied = application is not None
 		posting.application_id = application.id if application else None
+		posting.application_status = application.status if application else None
 
 		return posting

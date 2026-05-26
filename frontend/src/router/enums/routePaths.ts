@@ -16,6 +16,7 @@ export const ROUTE_PATHS = {
   EMPLOYER_APPLICANTS: 'employer/job-postings/:id/applicants',
   EMPLOYER_APPLICATION_DETAIL:
     'employer/job-postings/:postingId/applications/:id',
+  CANDIDATE_APPLICATIONS: 'candidate/applications',
   NOT_FOUND: '/:pathMatch(.*)*',
 } as const;
 

@@ -67,6 +67,7 @@ export interface CandidateJobPostingDetail {
   match_score: number;
   has_applied: boolean;
   application_id: string | null;
+  application_status: ApplicationStatus | null;
   created_at: string;
   updated_at: string;
 }
@@ -117,6 +118,7 @@ export interface CandidateApplication {
   company_name: string;
   match_score: number;
   status: ApplicationStatus;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -140,6 +142,10 @@ export const candidateApplicationApi = {
   cancel: (id: string) =>
     apiRequest<void>(`/applications/${id}/`, {
       method: 'DELETE',
+    }),
+  archive: (id: string) =>
+    apiRequest<CandidateApplication>(`/applications/${id}/archive/`, {
+      method: 'POST',
     }),
 };
 

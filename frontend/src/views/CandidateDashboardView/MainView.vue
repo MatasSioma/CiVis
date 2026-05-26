@@ -8,7 +8,6 @@ import { cvApi } from '@/services/cv';
 import { ApiError } from '@/services/api';
 import DashboardCard from '@/components/DashboardCard.vue';
 import {
-  APPLICATION_STATUS_LABELS,
   JOB_TYPE_LABELS,
   WORKPLACE_TYPE_LABELS,
   type JobType,
@@ -150,8 +149,6 @@ const applyingId = ref<string | null>(null);
 
 const applications = ref<CandidateApplication[]>([]);
 const isApplicationsLoading = ref(true);
-const cancellingApplicationId = ref<string | null>(null);
-
 async function loadApplications() {
   isApplicationsLoading.value = true;
 
@@ -161,37 +158,6 @@ async function loadApplications() {
     showToast('Nepavyko įkelti paraiškų.', 'error');
   } finally {
     isApplicationsLoading.value = false;
-  }
-}
-
-async function cancelApplication(application: CandidateApplication) {
-  if (
-    !window.confirm(
-      `Ar tikrai norite atšaukti paraišką į „${application.job_posting_title}“?`,
-    )
-  ) {
-    return;
-  }
-
-  cancellingApplicationId.value = application.id;
-
-  try {
-    await candidateApplicationApi.cancel(application.id);
-    showToast('Paraiška atšaukta.', 'success');
-    await Promise.all([
-      loadApplications(),
-      loadPostings(postingsPage.value, filters.ordering, {
-        search: filters.search,
-        job_type: filters.job_type,
-        workplace_type: filters.workplace_type,
-        min_salary: filters.min_salary,
-        location: filters.location,
-      }),
-    ]);
-  } catch {
-    showToast('Nepavyko atšaukti paraiškos.', 'error');
-  } finally {
-    cancellingApplicationId.value = null;
   }
 }
 
@@ -343,12 +309,6 @@ function matchScoreColorClasses(score: number): string {
   return 'bg-red-100 text-red-700';
 }
 
-function applicationStatusClasses(status: CandidateApplication['status']): string {
-  if (status === 'accepted') return 'bg-primary text-attention';
-  if (status === 'rejected') return 'bg-red-100 text-red-700';
-  return 'bg-gray-100 text-gray-700';
-}
-
 function workplaceLabel(posting: CandidateJobPosting): string {
   if (posting.workplace_type === 'remote') {
     return WORKPLACE_TYPE_LABELS.remote;
@@ -463,49 +423,16 @@ onMounted(async () => {
           class="mt-3 text-sm text-gray-700">
           Dar nepateikėte paraiškų.
         </p>
-        <ul v-else class="mt-3 space-y-2">
-          <li
-            v-for="application in applications"
-            :key="application.id"
-            class="rounded-md border border-gray-200 bg-background/40 p-3">
-            <div class="flex items-start justify-between gap-2">
-              <RouterLink
-                class="text-sm font-medium text-gray-950 hover:underline"
-                :to="{
-                  name: ROUTE_NAMES.CANDIDATE_JOB_POSTING,
-                  params: { id: application.job_posting },
-                }">
-                {{ application.job_posting_title }}
-              </RouterLink>
-              <span
-                class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
-                :class="matchScoreColorClasses(application.match_score)">
-                {{ application.match_score }} / 100
-              </span>
-            </div>
-            <div class="mt-1 flex items-center justify-between gap-2">
-              <p class="text-xs text-gray-500">{{ application.company_name }}</p>
-              <button
-                v-if="application.status === 'pending'"
-                class="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
-                :disabled="cancellingApplicationId === application.id"
-                type="button"
-                @click="cancelApplication(application)">
-                {{
-                  cancellingApplicationId === application.id
-                    ? 'Atšaukiama...'
-                    : 'Atšaukti'
-                }}
-              </button>
-              <span
-                v-else
-                class="rounded-full px-2.5 py-1 text-xs font-semibold"
-                :class="applicationStatusClasses(application.status)">
-                {{ APPLICATION_STATUS_LABELS[application.status] }}
-              </span>
-            </div>
-          </li>
-        </ul>
+        <template v-else>
+          <p class="mt-3 text-sm text-gray-700">
+            Pateikta paraiškų: {{ applications.length }}
+          </p>
+          <RouterLink
+            class="bg-attention hover:bg-secondary mt-4 inline-block cursor-pointer rounded-md px-4 py-2 text-sm font-semibold text-white transition"
+            :to="{ name: ROUTE_NAMES.CANDIDATE_APPLICATIONS }">
+            Peržiūrėti paraiškas →
+          </RouterLink>
+        </template>
       </DashboardCard>
     </div>
 

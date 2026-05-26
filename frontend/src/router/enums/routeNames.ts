@@ -15,6 +15,7 @@ export const ROUTE_NAMES = {
   CANDIDATE_JOB_POSTING: 'CandidateJobPosting',
   EMPLOYER_APPLICANTS: 'EmployerApplicants',
   EMPLOYER_APPLICATION_DETAIL: 'EmployerApplicationDetail',
+  CANDIDATE_APPLICATIONS: 'CandidateApplications',
   NOT_FOUND: 'NotFound',
 } as const;
 
