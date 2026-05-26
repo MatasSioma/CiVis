@@ -282,14 +282,54 @@ export interface EmployerApplicationDetail {
   updated_at: string;
 }
 
+export type ApplicantOrdering =
+  | '-match_score'
+  | 'match_score'
+  | '-created_at'
+  | 'created_at';
+
+export const APPLICANT_ORDERING_OPTIONS: {
+  value: ApplicantOrdering;
+  label: string;
+}[] = [
+  { value: '-created_at', label: 'Naujausios paraiškos viršuje' },
+  { value: 'created_at', label: 'Seniausios paraiškos viršuje' },
+  { value: '-match_score', label: 'Pagal atitikimą (geriausi viršuje)' },
+  { value: 'match_score', label: 'Pagal atitikimą (prasčiausi viršuje)' },
+];
+
+export const DEFAULT_APPLICANT_ORDERING: ApplicantOrdering = '-created_at';
+
+export interface EmployerApplicantListParams {
+  page?: number;
+  ordering?: ApplicantOrdering;
+  search?: string;
+  status?: ApplicationStatus | '';
+}
+
 export const employerApplicationApi = {
-  list: (jobPostingId: string, page = 1) => {
-    const params = new URLSearchParams({
+  list: (jobPostingId: string, params: EmployerApplicantListParams = {}) => {
+    const {
+      page = 1,
+      ordering = DEFAULT_APPLICANT_ORDERING,
+      search = '',
+      status = '',
+    } = params;
+    const query = new URLSearchParams({
       job_posting: jobPostingId,
       page: String(page),
+      ordering,
     });
+
+    if (search.trim()) {
+      query.set('search', search.trim());
+    }
+    if (status) {
+      query.set('status', status);
+    }
+
     return apiRequest<Paginated<EmployerApplicantListItem>>(
-      `/applications/?${params.toString()}`,
+      `/applications/?${query.toString()}`,
     );
   },
   get: (id: string) =>

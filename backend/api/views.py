@@ -480,6 +480,14 @@ class JobPostingViewSet(viewsets.ModelViewSet):
 class ApplicationViewSet(viewsets.ModelViewSet):
 	queryset = Application.objects.all().order_by('-created_at')
 	serializer_class = ApplicationSerializer
+	filter_backends = [SearchFilter, OrderingFilter]
+	search_fields = [
+		'applicant__first_name',
+		'applicant__last_name',
+		'applicant__email',
+	]
+	ordering_fields = ['match_score', 'created_at']
+	ordering = ['-created_at']
 
 	def get_permissions(self):
 		if self.action in {'create', 'destroy'}:
@@ -505,7 +513,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
 		if job_posting:
 			queryset = queryset.filter(job_posting=job_posting)
 
-		return queryset.order_by('-created_at')
+		status_param = self.request.query_params.get('status')
+		if status_param in Application.Status.values:
+			queryset = queryset.filter(status=status_param)
+
+		return queryset
 
 	def get_serializer_class(self):
 		user = self.request.user

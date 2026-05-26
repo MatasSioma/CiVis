@@ -5,12 +5,15 @@ import { ROUTE_NAMES } from '@/router/enums/routeNames';
 import { useToasts } from '@/stores/toasts';
 import { ApiError } from '@/services/api';
 import {
+  APPLICANT_ORDERING_OPTIONS,
   APPLICATION_STATUS_LABELS,
   APPLICATION_STATUS_VALUES,
+  DEFAULT_APPLICANT_ORDERING,
   JOB_TYPE_LABELS,
   SKILL_TYPE_LABELS,
   employerApplicationApi,
   jobPostingApi,
+  type ApplicantOrdering,
   type ApplicationStatus,
   type EmployerApplicantListItem,
   type JobPostingDetail,
@@ -57,6 +60,19 @@ const isApplicantsLoading = ref(true);
 
 const updatingStatusId = ref<string | null>(null);
 
+const searchInput = ref('');
+const currentSearch = ref('');
+const currentOrdering = ref<ApplicantOrdering>(DEFAULT_APPLICANT_ORDERING);
+const currentStatus = ref<ApplicationStatus | ''>('');
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+const ALLOWED_APPLICANT_ORDERINGS = APPLICANT_ORDERING_OPTIONS.map((o) => o.value);
+const ALLOWED_STATUSES: ApplicationStatus[] = [...APPLICATION_STATUS_VALUES];
+
+const hasAnyFilter = computed(
+  () => Boolean(currentSearch.value || currentStatus.value),
+);
+
 const totalPages = computed(() => {
   if (applicantsTotal.value === 0) return 1;
   return Math.ceil(applicantsTotal.value / PAGE_SIZE);
@@ -66,6 +82,25 @@ function parsePage(raw: unknown): number {
   const value = Array.isArray(raw) ? raw[0] : raw;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 1;
+}
+
+function parseString(raw: unknown): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === 'string' ? value : '';
+}
+
+function parseApplicantOrdering(raw: unknown): ApplicantOrdering {
+  const value = parseString(raw);
+  return ALLOWED_APPLICANT_ORDERINGS.includes(value as ApplicantOrdering)
+    ? (value as ApplicantOrdering)
+    : DEFAULT_APPLICANT_ORDERING;
+}
+
+function parseStatus(raw: unknown): ApplicationStatus | '' {
+  const value = parseString(raw);
+  return ALLOWED_STATUSES.includes(value as ApplicationStatus)
+    ? (value as ApplicationStatus)
+    : '';
 }
 
 function formatShortDate(iso: string | null): string {
@@ -98,22 +133,57 @@ async function loadPosting() {
   }
 }
 
-async function loadApplicants(page: number) {
+async function loadApplicants(
+  page: number,
+  ordering: ApplicantOrdering,
+  search: string,
+  status: ApplicationStatus | '',
+) {
   if (!postingId.value) return;
   isApplicantsLoading.value = true;
 
   try {
-    const data = await employerApplicationApi.list(postingId.value, page);
+    const data = await employerApplicationApi.list(postingId.value, {
+      page,
+      ordering,
+      search,
+      status,
+    });
     applicants.value = data.results;
     applicantsTotal.value = data.count;
     applicantsNext.value = data.next;
     applicantsPrevious.value = data.previous;
     applicantsPage.value = page;
+    currentOrdering.value = ordering;
+    currentSearch.value = search;
+    currentStatus.value = status;
   } catch {
     showToast('Nepavyko įkelti kandidatų.', 'error');
   } finally {
     isApplicantsLoading.value = false;
   }
+}
+
+function syncFromRoute() {
+  currentSearch.value = parseString(route.query.search);
+  currentOrdering.value = parseApplicantOrdering(route.query.ordering);
+  currentStatus.value = parseStatus(route.query.status);
+  searchInput.value = currentSearch.value;
+}
+
+async function updateQuery(patch: Record<string, string | null>) {
+  const nextQuery = { ...route.query };
+  delete nextQuery.page;
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (value == null || value === '') {
+      delete nextQuery[key];
+    } else {
+      nextQuery[key] = value;
+    }
+  }
+
+  await router.push({ query: nextQuery });
 }
 
 async function goToPage(page: number) {
@@ -126,6 +196,32 @@ async function goToPage(page: number) {
     nextQuery.page = String(target);
   }
 
+  await router.push({ query: nextQuery });
+}
+
+async function setOrdering(value: ApplicantOrdering) {
+  await updateQuery({
+    ordering: value === DEFAULT_APPLICANT_ORDERING ? null : value,
+  });
+}
+
+async function setStatus(value: ApplicationStatus | '') {
+  await updateQuery({ status: value || null });
+}
+
+function onSearchInput(value: string) {
+  searchInput.value = value;
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    void updateQuery({ search: value.trim() || null });
+  }, 300);
+}
+
+async function clearFilters() {
+  const nextQuery = { ...route.query };
+  delete nextQuery.search;
+  delete nextQuery.status;
+  delete nextQuery.page;
   await router.push({ query: nextQuery });
 }
 
@@ -170,21 +266,36 @@ async function updateStatus(
   }
 }
 
+function refetchApplicantsFromRoute() {
+  syncFromRoute();
+  void loadApplicants(
+    parsePage(route.query.page),
+    currentOrdering.value,
+    currentSearch.value,
+    currentStatus.value,
+  );
+}
+
 watch(
-  () => route.query.page,
+  () => [
+    route.query.page,
+    route.query.ordering,
+    route.query.search,
+    route.query.status,
+  ],
   () => {
-    void loadApplicants(parsePage(route.query.page));
+    refetchApplicantsFromRoute();
   },
 );
 
 watch(postingId, () => {
   void loadPosting();
-  void loadApplicants(parsePage(route.query.page));
+  refetchApplicantsFromRoute();
 });
 
 onMounted(() => {
   void loadPosting();
-  void loadApplicants(parsePage(route.query.page));
+  refetchApplicantsFromRoute();
 });
 </script>
 
@@ -287,13 +398,70 @@ onMounted(() => {
     </header>
 
     <section class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-      <p v-if="isApplicantsLoading" class="text-sm text-gray-600">Kraunama...</p>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <label class="block">
+          <span class="text-xs font-medium text-gray-600">Paieška</span>
+          <input
+            :value="searchInput"
+            class="mt-1 h-9 w-full rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-950 outline-none transition placeholder:text-gray-400 focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            placeholder="Ieškoti pagal vardą ar el. paštą"
+            type="search"
+            @input="onSearchInput(($event.target as HTMLInputElement).value)" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-gray-600">Rikiuoti</span>
+          <select
+            :value="currentOrdering"
+            class="mt-1 h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-950 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            @change="setOrdering(($event.target as HTMLSelectElement).value as ApplicantOrdering)">
+            <option
+              v-for="opt in APPLICANT_ORDERING_OPTIONS"
+              :key="opt.value"
+              :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-xs font-medium text-gray-600">Būsena</span>
+          <select
+            :value="currentStatus"
+            class="mt-1 h-9 w-full rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-950 outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/40"
+            @change="setStatus(($event.target as HTMLSelectElement).value as ApplicationStatus | '')">
+            <option value="">Visos</option>
+            <option
+              v-for="value in APPLICATION_STATUS_VALUES"
+              :key="value"
+              :value="value">
+              {{ APPLICATION_STATUS_LABELS[value] }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div v-if="hasAnyFilter" class="mt-3 flex justify-end">
+        <button
+          class="text-xs font-semibold text-attention underline-offset-4 hover:underline"
+          type="button"
+          @click="clearFilters">
+          Išvalyti filtrus
+        </button>
+      </div>
+
+      <p v-if="isApplicantsLoading" class="mt-4 text-sm text-gray-600">Kraunama...</p>
 
       <div
         v-else-if="applicants.length === 0"
-        class="flex flex-col items-center gap-3 rounded-md border border-dashed border-gray-300 bg-background/40 px-4 py-8 text-center">
-        <p class="text-sm text-gray-700">Į šį skelbimą dar nėra paraiškų.</p>
+        class="mt-4 flex flex-col items-center gap-3 rounded-md border border-dashed border-gray-300 bg-background/40 px-4 py-8 text-center">
+        <p class="text-sm text-gray-700">
+          {{
+            hasAnyFilter
+              ? 'Pagal pasirinktus filtrus paraiškų nerasta.'
+              : 'Į šį skelbimą dar nėra paraiškų.'
+          }}
+        </p>
         <button
+          v-if="!hasAnyFilter"
           class="rounded-md bg-attention px-4 py-2 text-sm font-semibold text-white transition hover:bg-secondary"
           type="button"
           @click="goBack">
@@ -301,7 +469,7 @@ onMounted(() => {
         </button>
       </div>
 
-      <div v-else class="overflow-x-auto">
+      <div v-else class="mt-4 overflow-x-auto">
         <table class="w-full border-collapse text-left text-sm">
           <thead>
             <tr class="border-b border-gray-200 text-xs uppercase tracking-wide text-gray-500">
