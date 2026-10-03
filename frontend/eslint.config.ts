@@ -1,5 +1,6 @@
 import { globalIgnores } from 'eslint/config';
 import pluginVue from 'eslint-plugin-vue';
+import pluginPlaywright from 'eslint-plugin-playwright';
 import {
   configureVueProject,
   defineConfigWithVueTs,
@@ -15,5 +16,16 @@ export default defineConfigWithVueTs(
   pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
 
-  globalIgnores(['**/node_modules/**', '**/dist/**', '**/dist-ssr/**']),
+  {
+    ...pluginPlaywright.configs['flat/recommended'],
+    files: ['e2e/**/*.spec.ts'],
+  },
+
+  globalIgnores([
+    '**/node_modules/**',
+    '**/dist/**',
+    '**/dist-ssr/**',
+    '**/playwright-report/**',
+    '**/test-results/**',
+  ]),
 );

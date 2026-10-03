@@ -42,11 +42,13 @@ docker compose exec backend python manage.py createsuperuser
     ├── Dockerfile
     ├── package.json
     ├── vite.config.ts
+    ├── playwright.config.ts  # Playwright (e2e) config
     ├── tsconfig.json         # TypeScript config (references app + node)
     ├── eslint.config.ts      # ESLint config
     ├── .prettierrc           # Prettier config
     ├── .stylelintrc          # Stylelint config
     ├── index.html
+    ├── e2e/                  # Playwright end-to-end tests
     └── src/
         ├── main.ts
         ├── App.vue
@@ -175,6 +177,29 @@ npm run lint:style
 # Type-check
 npm run typecheck
 ```
+
+#### E2E Tests (Playwright)
+
+End-to-end tests live in `frontend/e2e/` (config: `frontend/playwright.config.ts`). Run them on your machine from `frontend/`, not inside the Docker container:
+
+```bash
+# One-time setup: install dependencies and the Chromium browser
+npm install
+npx playwright install chromium
+
+# Run all tests
+npm run test:e2e
+
+# Interactive UI mode (watch mode, time-travel debugging)
+npm run test:e2e:ui
+
+# Open the HTML report of the last run
+npx playwright show-report
+```
+
+- If the frontend is already running on http://localhost:5173 (e.g. via `docker compose up`), Playwright reuses it; otherwise it starts `vite dev` itself.
+- Locally the browser runs headed so you can watch the tests. On CI (`CI=true`) it runs headless against `vite preview`, so build first with `npm run build`.
+- Tests mock every `/api/*` request with `page.route` (see `e2e/support/mockApi.ts`), so the backend doesn't need to be running. When a test needs another endpoint, add it there.
 
 ### Customizing Tailwind CSS
 

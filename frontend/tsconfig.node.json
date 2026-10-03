@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/node22/tsconfig.json",
-  "include": ["vite.config.*"],
+  "include": ["vite.config.*", "playwright.config.*", "e2e/**/*.ts"],
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",
