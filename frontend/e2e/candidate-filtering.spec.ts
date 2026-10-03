@@ -47,14 +47,14 @@ function applicant(
   };
 }
 
-// The candidates who applied, with the match scores of the backend test: the
-// TC-FR25-01 boundaries 0, 1, 99 and 100, and 50 in between.
+// The candidates who applied, with the match scores of the backend test, in
+// the API's default order (newest first), which is not the order of the scores.
 const APPLICANTS = [
-  applicant(1, CANDIDATE.first_name, CANDIDATE.last_name, 0),
-  applicant(2, 'Petras', 'Petraitis', 1),
-  applicant(3, 'Mantas', 'Mantaitis', 50),
-  applicant(4, 'Lukas', 'Lukaitis', 99),
-  applicant(5, 'Rokas', 'Rokaitis', 100),
+  applicant(1, CANDIDATE.first_name, CANDIDATE.last_name, 50),
+  applicant(2, 'Petras', 'Petraitis', 0),
+  applicant(3, 'Mantas', 'Mantaitis', 100),
+  applicant(4, 'Lukas', 'Lukaitis', 1),
+  applicant(5, 'Rokas', 'Rokaitis', 99),
 ];
 
 /** The employer's posting 1 and the candidates who applied to it. */
@@ -66,21 +66,32 @@ async function mockCandidateList(page: Page) {
   );
   await page.route(
     (url) => url.pathname === '/api/applications/',
-    (route) =>
-      route.fulfill({
-        json: {
-          count: APPLICANTS.length,
-          next: null,
-          previous: null,
-          results: APPLICANTS,
-        },
-      }),
+    (route) => {
+      // Like the API, sorts the candidates by match score when asked to.
+      const ordering = new URL(route.request().url()).searchParams.get(
+        'ordering',
+      );
+      const results =
+        ordering === '-match_score'
+          ? [...APPLICANTS].sort((a, b) => b.match_score - a.match_score)
+          : APPLICANTS;
+
+      return route.fulfill({
+        json: { count: results.length, next: null, previous: null, results },
+      });
+    },
   );
 }
 
 /** The candidates' rows, without the header row. */
 function candidateRows(page: Page) {
   return page.getByRole('row').filter({ has: page.getByRole('cell') });
+}
+
+async function sortByBestMatch(page: Page) {
+  await page
+    .getByLabel('Rikiuoti')
+    .selectOption({ label: 'Pagal atitikimą (geriausi viršuje)' });
 }
 
 test.describe(
@@ -93,22 +104,24 @@ test.describe(
     },
   },
   () => {
-    test(
-      'TC-FR25-01 filters candidates by minimum score (AC1)',
-      {
-        annotation: {
-          type: 'defect',
-          description: 'The applicants list has no filter by minimum score.',
-        },
-      },
-      async ({ page }) => {
-        await mockCandidateList(page);
-        await page.goto(CANDIDATES_URL);
-        await expect(candidateRows(page)).toHaveCount(APPLICANTS.length);
+    test('TC-FR25-01 sorts candidates by match score, best first (AC1)', async ({
+      page,
+    }) => {
+      // The list has no filter by minimum score, so sorting by match score stands in.
+      await mockCandidateList(page);
+      await page.goto(CANDIDATES_URL);
+      await expect(candidateRows(page)).toHaveCount(APPLICANTS.length);
 
-        await expect(page.getByLabel('Minimalus įvertinimas')).toBeVisible();
-      },
-    );
+      await sortByBestMatch(page);
+
+      await expect(candidateRows(page).getByText(/\d+ \/ 100/)).toHaveText([
+        '100 / 100',
+        '99 / 100',
+        '50 / 100',
+        '1 / 100',
+        '0 / 100',
+      ]);
+    });
 
     test(
       'TC-FR25-02 filters candidates by competence (AC2)',
@@ -133,7 +146,7 @@ test.describe(
         annotation: {
           type: 'defect',
           description:
-            'The applicants list has no filter by score or competence, so they cannot be combined.',
+            'The applicants list has no filter by competence, so it cannot be combined with sorting by match score.',
         },
       },
       async ({ page }) => {
@@ -141,7 +154,7 @@ test.describe(
         await page.goto(CANDIDATES_URL);
         await expect(candidateRows(page)).toHaveCount(APPLICANTS.length);
 
-        await expect(page.getByLabel('Minimalus įvertinimas')).toBeVisible();
+        await sortByBestMatch(page);
         await expect(page.getByLabel('Kompetencija')).toBeVisible();
       },
     );
