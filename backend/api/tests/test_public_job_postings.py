@@ -20,7 +20,7 @@ PUBLIC_FIELDS = {
 
 
 class PublicJobPostingsAPITest(APITestCase):
-	"""KAN-151: FR-04: Neprisijungusiam vartotojui rodomas filtruojamas, rūšiuojamas darbo pozicijų sąrašas."""
+	"""KAN-151: FR-04: Neprisijungusiam vartotojui rodomas darbo pozicijų sąrašas."""
 
 	@classmethod
 	def setUpTestData(cls):
@@ -83,7 +83,9 @@ class PublicJobPostingsAPITest(APITestCase):
 	def test_tc_fr151_08_response_has_only_public_fields(self):
 		candidate = User.objects.create_user(username='candidate', role=User.Role.JOB_SEEKER)
 		cv = CV.objects.create(user=candidate, file_key='cvs/cv.pdf')
-		Application.objects.create(job_posting=self.frontend, applicant=candidate, cv=cv, match_score=80)
+		Application.objects.create(
+			job_posting=self.frontend, applicant=candidate, cv=cv, match_score=80
+		)
 
 		response = self.client.get(reverse('public-job-postings'))
 

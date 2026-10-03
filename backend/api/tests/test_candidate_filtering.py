@@ -36,7 +36,8 @@ class CandidateFilteringAPITest(APITestCase):
 
 	def filter_candidates(self, **filters):
 		self.client.force_authenticate(self.employer)
-		return self.client.get(reverse('application-list'), {'job_posting': self.posting.pk, **filters})
+		params = {'job_posting': self.posting.pk, **filters}
+		return self.client.get(reverse('application-list'), params)
 
 	# Defect: the applicant list has no filter by minimum score.
 	def test_tc_fr25_01_min_score_inside_range_shows_candidates_with_score_at_least_it(self):
