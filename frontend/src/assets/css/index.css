@@ -4,6 +4,11 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import './theme.css' layer(theme);
 
+/* Playwright output. The Docker container can't see the repo's .gitignore, so
+   Tailwind would scan these reports, which every test run rewrites. */
+@source not '../../../playwright-report';
+@source not '../../../test-results';
+
 :root {
   font-family: var(--font-family-primary);
 }

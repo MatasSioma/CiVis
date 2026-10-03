@@ -3,9 +3,6 @@ import { CANDIDATE, CV, EMPLOYER, mockApi } from './support/mockApi';
 
 const SKILL = CV.skills[0].name;
 
-// Every executed test case needs a screenshot of its result in the report.
-test.use({ screenshot: 'on' });
-
 test.describe(
   'KAN-28 Naudotojas gali ištrinti savo CV',
   {

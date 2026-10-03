@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 
 export const JOB_POSTINGS = [
   {
@@ -62,13 +62,40 @@ export const CV = {
   updated_at: '2026-09-15T10:00:00Z',
 };
 
-const EMPTY_PAGE = { count: 0, next: null, previous: null, results: [] };
+export const INDUSTRIES = [
+  { id: 'industry-1', name: 'Informacinės technologijos' },
+  { id: 'industry-2', name: 'Finansai' },
+];
+
+export const COMPANY = {
+  id: 'company-1',
+  owner: EMPLOYER.id,
+  name: 'UAB Pavyzdys',
+  description: 'Programinės įrangos kūrimas',
+  registration_code: '123456789',
+  address: 'Vilnius',
+  contact_email: 'info@pavyzdys.lt',
+  contact_phone: '',
+  website: '',
+  date_established: null,
+  created_at: '2026-09-01T10:00:00Z',
+  updated_at: '2026-09-01T10:00:00Z',
+};
+
+/** A job posting as the mocked API stores and returns it. */
+type JobPosting = Record<string, unknown> & { id: string };
+
+function paginated<T>(results: T[]) {
+  return { count: results.length, next: null, previous: null, results };
+}
 
 interface MockApiOptions {
   /** The logged-in user; a guest when omitted. */
   user?: typeof CANDIDATE | typeof EMPLOYER;
   /** The candidate's CV; not uploaded when omitted. */
   cv?: typeof CV;
+  /** Makes creating or updating a job posting fail with a server error. */
+  failJobPostingSaves?: boolean;
 }
 
 /**
@@ -77,13 +104,54 @@ interface MockApiOptions {
  * endpoints return 404. Returns the mocked server state, so specs can check
  * which changes reached the "server".
  */
-export async function mockApi(page: Page, { user, cv }: MockApiOptions = {}) {
-  const state = { cv: cv ?? null, cvDeleteRequests: 0 };
+export async function mockApi(
+  page: Page,
+  { user, cv, failJobPostingSaves = false }: MockApiOptions = {},
+) {
+  const state = {
+    cv: cv ?? null,
+    cvDeleteRequests: 0,
+    /** The saved job postings: the mocked `job_postings` table. */
+    jobPostings: [] as JobPosting[],
+    /** How many requests tried to create or update a job posting. */
+    jobPostingSaves: 0,
+  };
+
+  function saveJobPosting(route: Route, existing?: JobPosting) {
+    state.jobPostingSaves += 1;
+
+    if (failJobPostingSaves) {
+      return route.fulfill({
+        status: 500,
+        contentType: 'text/html',
+        body: '<h1>Server Error (500)</h1>',
+      });
+    }
+
+    const { skills, ...fields } = route.request().postDataJSON();
+    const posting: JobPosting = {
+      created_at: '2026-10-01T10:00:00Z',
+      ...existing,
+      ...fields,
+      id: existing?.id ?? `posting-${state.jobPostings.length + 1}`,
+      company: COMPANY.id,
+      skills_detail: skills,
+      updated_at: '2026-10-01T10:00:00Z',
+    };
+
+    state.jobPostings = [
+      ...state.jobPostings.filter((saved) => saved.id !== posting.id),
+      posting,
+    ];
+
+    return route.fulfill({ status: existing ? 200 : 201, json: posting });
+  }
 
   await page.route(
     (url) => url.pathname.startsWith('/api/'),
     (route) => {
       const url = new URL(route.request().url());
+      const method = route.request().method();
 
       if (url.pathname === '/api/auth/session/') {
         return route.fulfill({
@@ -97,15 +165,11 @@ export async function mockApi(page: Page, { user, cv }: MockApiOptions = {}) {
           posting.title.toLowerCase().includes(search),
         );
 
-        return route.fulfill({
-          json: { count: results.length, next: null, previous: null, results },
-        });
+        return route.fulfill({ json: paginated(results) });
       }
 
       if (url.pathname === '/api/cv/me/') {
-        const isDelete = route.request().method() === 'DELETE';
-
-        if (isDelete) {
+        if (method === 'DELETE') {
           state.cvDeleteRequests += 1;
         }
 
@@ -116,7 +180,7 @@ export async function mockApi(page: Page, { user, cv }: MockApiOptions = {}) {
           });
         }
 
-        if (isDelete) {
+        if (method === 'DELETE') {
           state.cv = null;
           return route.fulfill({ status: 204 });
         }
@@ -124,11 +188,58 @@ export async function mockApi(page: Page, { user, cv }: MockApiOptions = {}) {
         return route.fulfill({ json: state.cv });
       }
 
+      if (url.pathname === '/api/industries/') {
+        return route.fulfill({ json: INDUSTRIES });
+      }
+
+      if (url.pathname === '/api/companies/') {
+        return route.fulfill({ json: paginated([COMPANY]) });
+      }
+
+      if (url.pathname === '/api/job-postings/') {
+        if (method === 'POST') {
+          return saveJobPosting(route);
+        }
+
+        const listItems = state.jobPostings.map((posting) => ({
+          ...posting,
+          industry_name: INDUSTRIES.find(
+            (industry) => industry.id === posting.industry,
+          )?.name,
+          applicant_count: 0,
+        }));
+
+        return route.fulfill({ json: paginated(listItems) });
+      }
+
+      const postingId = url.pathname.match(
+        /^\/api\/job-postings\/([^/]+)\/$/,
+      )?.[1];
+
+      if (postingId) {
+        const posting = state.jobPostings.find(
+          (saved) => saved.id === postingId,
+        );
+
+        if (!posting) {
+          return route.fulfill({
+            status: 404,
+            json: { detail: 'No JobPosting matches the given query.' },
+          });
+        }
+
+        if (method === 'PUT') {
+          return saveJobPosting(route, posting);
+        }
+
+        return route.fulfill({ json: posting });
+      }
+
       if (
         url.pathname === '/api/applications/' ||
         url.pathname === '/api/candidate/job-postings/'
       ) {
-        return route.fulfill({ json: EMPTY_PAGE });
+        return route.fulfill({ json: paginated([]) });
       }
 
       // No applications exist, like in the backend after a candidate deletes
