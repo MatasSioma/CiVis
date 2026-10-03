@@ -68,7 +68,7 @@ test.describe(
       ).toBeHidden();
     });
 
-    test.fail(
+    test(
       'TC-FR151-04 shows "No jobs match your filters" when nothing matches (AC8)',
       {
         annotation: {
@@ -131,7 +131,7 @@ test.describe(
       async () => {},
     );
 
-    test.fail(
+    test(
       'TC-FR151-07 does not let a guest apply for a job (AC6)',
       {
         annotation: {
@@ -149,7 +149,7 @@ test.describe(
       },
     );
 
-    test.fail(
+    test(
       'TC-FR151-09 shows an error and a "Try again" button when the postings fail to load (AC8)',
       {
         annotation: {

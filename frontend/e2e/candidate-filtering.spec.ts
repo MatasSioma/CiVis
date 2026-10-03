@@ -22,7 +22,7 @@ test.describe(
     },
   },
   () => {
-    test.fail(
+    test(
       'TC-FR25-01 filters candidates by minimum score (AC1)',
       {
         annotation: {
@@ -38,7 +38,7 @@ test.describe(
       },
     );
 
-    test.fail(
+    test(
       'TC-FR25-02 filters candidates by competence (AC2)',
       {
         annotation: {
@@ -54,7 +54,7 @@ test.describe(
       },
     );
 
-    test.fail(
+    test(
       'TC-FR25-03 combines several filters with AND (AC3)',
       {
         annotation: {

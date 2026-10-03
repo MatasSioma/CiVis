@@ -47,7 +47,7 @@ test.describe(
       ).toBeEnabled();
     });
 
-    test.fail(
+    test(
       'TC-US46-02 rejects a DOCX file (AC2)',
       {
         annotation: {
@@ -87,7 +87,7 @@ test.describe(
       });
     }
 
-    test.fail(
+    test(
       'TC-US46-03 rejects a 10.1 MB PDF file (AC3, BV5)',
       {
         annotation: {
@@ -145,7 +145,7 @@ test.describe(
       await expect(page.getByLabel('Pavadinimas')).toHaveValue('Python 3');
     });
 
-    test.fail(
+    test(
       'TC-US46-06 shows an error and a "Try again" button when the upload fails (AC6)',
       {
         annotation: {
