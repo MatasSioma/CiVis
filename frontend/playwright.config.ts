@@ -33,8 +33,9 @@ const config: PlaywrightTestConfig = {
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
 
-    /* Screenshot failed tests. Set SCREENSHOTS=1 to screenshot every test, e.g. as evidence for a test report. */
-    screenshot: process.env.SCREENSHOTS ? 'on' : 'only-on-failure',
+    /* Screenshot every test, passed or failed: test reports need one per executed test case.
+       Full page, so the result is in the picture even when it's outside the viewport. */
+    screenshot: { mode: 'on', fullPage: true },
 
     /* Only on CI systems run the tests headless */
     headless: !!process.env.CI,

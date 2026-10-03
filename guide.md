@@ -214,9 +214,6 @@ npx playwright install chromium
 # Run all tests
 npm run test:e2e
 
-# Run all tests and keep a screenshot of every test (by default only failures get one)
-SCREENSHOTS=1 npm run test:e2e
-
 # Interactive UI mode (watch mode, time-travel debugging)
 npm run test:e2e:ui
 
