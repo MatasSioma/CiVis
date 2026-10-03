@@ -1,4 +1,4 @@
-.PHONY: migrate migrate-new migrate-show lint lint-fix format format-check
+.PHONY: migrate migrate-new migrate-show lint lint-fix format format-check test
 
 migrate:
 	docker compose exec backend python manage.py migrate
@@ -21,3 +21,7 @@ format-check:
 
 format:
 	docker compose exec backend ruff format .
+
+# Run backend tests: make test, or a subset: make test t=api.tests.test_example
+test:
+	docker compose exec backend python manage.py test $(t) --settings=config.settings_test --noinput

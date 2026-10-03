@@ -36,8 +36,10 @@ docker compose exec backend python manage.py createsuperuser
 │   ├── ruff.toml            # Ruff linter & formatter config
 │   ├── manage.py
 │   ├── config/              # Django project settings, urls, wsgi/asgi
+│   │   └── settings_test.py # Settings overrides for tests
 │   └── api/                 # App: models, serializers, views, urls
-│       └── migrations/
+│       ├── migrations/
+│       └── tests/           # Backend tests (django.test)
 └── frontend/                # Vue.js SPA
     ├── Dockerfile
     ├── package.json
@@ -145,6 +147,28 @@ ruff check . --fix
 # Format code
 ruff format .
 ```
+
+#### Tests (django.test)
+
+Backend tests live in `backend/api/tests/` (files named `test_*.py`) and run inside the backend container against the Postgres (pgvector) `db` service. Django creates a separate `test_civis` database for each run and drops it afterwards, so your dev data is untouched.
+
+```bash
+# Run all tests
+docker compose exec backend python manage.py test --settings=config.settings_test
+
+# Shortcut from backend/ (uses the Makefile)
+make test
+
+# Run one module, class or test
+make test t=api.tests.test_example
+make test t=api.tests.test_example.ExampleAPITest
+```
+
+- Tests use `config/settings_test.py`, which sets a fast password hasher and blanks the OpenAI/Stripe keys, so a test can never reach the real APIs.
+- Pick the base class by what the test needs: `SimpleTestCase` (no database), `TestCase` (database) or DRF's `APITestCase` (API calls; log in with `self.client.force_authenticate(user)`).
+- Mock OpenAI, Stripe and S3 with `unittest.mock.patch` where the code uses them, e.g. `mock.patch('api.views.upload_cv')`.
+- `api/tests/test_example.py` holds placeholder tests; replace them with real ones.
+- CI runs the tests in the `backend-tests` job (`.github/workflows/ci.yml`).
 
 ### Frontend
 
