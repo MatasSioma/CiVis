@@ -14,7 +14,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-producti
 PERSONAL_CODE_PEPPER = os.environ.get('PERSONAL_CODE_PEPPER', SECRET_KEY)
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY') or os.environ.get('OPEN_API_KEY', '')
 
-MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'minio:9000')
+MINIO_ENDPOINT = os.environ.get('MINIO_ENDPOINT', 'seaweedfs:8333')
 MINIO_ACCESS_KEY = os.environ.get('MINIO_ACCESS_KEY', 'minioadmin')
 MINIO_SECRET_KEY = os.environ.get('MINIO_SECRET_KEY', 'minioadmin')
 MINIO_BUCKET = os.environ.get('MINIO_BUCKET', 'civis-cvs')

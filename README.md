@@ -60,7 +60,7 @@ visiškai paruoštas paleisti su **Docker**.
 | **Serverio dalis** (backend) | Python, Django, Django REST Framework |
 | **Duomenų bazė** | PostgreSQL su [`pgvector`](https://github.com/pgvector/pgvector) plėtiniu (reikšmių paieškai) |
 | **Dirbtinis intelektas** | OpenAI (CV įgūdžių išskyrimas ir reikšmės išraiškos) |
-| **Failų saugykla** | MinIO / S3 (CV dokumentams) |
+| **Failų saugykla** | SeaweedFS / S3 (CV dokumentams) |
 | **Mokėjimai** | Stripe |
 | **Infrastruktūra** | Docker, Docker Compose |
 
