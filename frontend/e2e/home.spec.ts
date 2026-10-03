@@ -1,9 +1,17 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { mockApi } from './support/mockApi';
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
+
+async function openPostings(page: Page) {
+  await page.goto('/');
+  // The postings table fades in only after scrolling to it.
+  const postings = page.locator('section').last();
+  await postings.scrollIntoViewIfNeeded();
+  await expect(postings).toHaveCSS('opacity', '1');
+}
 
 test.describe(
   'KAN-151 FR-04: Neprisijungusiam vartotojui rodomas filtruojamas, rūšiuojamas darbo pozicijų sąrašas',
@@ -18,7 +26,7 @@ test.describe(
     test('TC-FR151-01 shows the landing page with open job postings without logging in (AC1)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
 
       await expect(page).toHaveTitle('CiVis');
       await expect(
@@ -38,7 +46,7 @@ test.describe(
     test('TC-FR151-03 shows the main posting information without a match percentage (AC2)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
 
       const posting = page.getByRole('row', {
         name: 'Frontend programuotojas',
@@ -56,7 +64,7 @@ test.describe(
     test('TC-FR151-04 shows only the postings that match the filter (AC3)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
       await page.getByPlaceholder('Ieškoti pagal pavadinimą').fill('Backend');
 
       await expect(page).toHaveURL(/\?search=Backend$/);
@@ -78,7 +86,7 @@ test.describe(
         },
       },
       async ({ page }) => {
-        await page.goto('/');
+        await openPostings(page);
         await page
           .getByPlaceholder('Ieškoti pagal pavadinimą')
           .fill('Pardavėjas');
@@ -92,7 +100,7 @@ test.describe(
     test('TC-FR151-05 sorts the postings by the newest first by default (AC4)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
 
       await expect(page.getByLabel('Rikiuoti')).toHaveValue('-updated_at');
     });
@@ -100,7 +108,7 @@ test.describe(
     test('TC-FR151-05 sorts the postings by salary when chosen (AC4)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
       const request = page.waitForRequest(/ordering=-salary_max/);
       await page
         .getByLabel('Rikiuoti')
@@ -113,7 +121,7 @@ test.describe(
     test('TC-FR151-05 does not offer sorting by match (AC4)', async ({
       page,
     }) => {
-      await page.goto('/');
+      await openPostings(page);
 
       await expect(
         page.getByLabel('Rikiuoti').getByRole('option', { name: /atitikim/i }),
@@ -141,7 +149,7 @@ test.describe(
         },
       },
       async ({ page }) => {
-        await page.goto('/');
+        await openPostings(page);
 
         await expect(
           page.getByRole('button', { name: 'Aplikuoti' }).first(),
@@ -168,7 +176,7 @@ test.describe(
               body: '<h1>Server Error (500)</h1>',
             }),
         );
-        await page.goto('/');
+        await openPostings(page);
 
         await expect(
           page.getByText('Failed to load jobs. Please try again'),
