@@ -131,16 +131,22 @@ test.describe(
       async () => {},
     );
 
-    test.skip(
+    test.fail(
       'TC-FR151-07 does not let a guest apply for a job (AC6)',
       {
         annotation: {
-          type: 'skip',
+          type: 'defect',
           description:
-            'The landing page has no "Apply" button; the server side is tested in test_public_job_postings.py.',
+            'The landing page has no "Aplikuoti" button, so a guest gets no "log in to apply" message. The server side is tested in test_public_job_postings.py.',
         },
       },
-      async () => {},
+      async ({ page }) => {
+        await page.goto('/');
+
+        await expect(
+          page.getByRole('button', { name: 'Aplikuoti' }).first(),
+        ).toBeVisible();
+      },
     );
 
     test.fail(

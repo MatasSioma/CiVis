@@ -22,38 +22,54 @@ test.describe(
     },
   },
   () => {
-    test.skip(
+    test.fail(
       'TC-FR25-01 filters candidates by minimum score (AC1)',
       {
         annotation: {
-          type: 'skip',
+          type: 'defect',
           description: 'The applicants list has no filter by minimum score.',
         },
       },
-      async () => {},
+      async ({ page }) => {
+        await mockApi(page, { user: EMPLOYER });
+        await page.goto('/employer/job-postings/1/applicants');
+
+        await expect(page.getByLabel('Minimalus įvertinimas')).toBeVisible();
+      },
     );
 
-    test.skip(
+    test.fail(
       'TC-FR25-02 filters candidates by competence (AC2)',
       {
         annotation: {
-          type: 'skip',
+          type: 'defect',
           description: 'The applicants list has no filter by competence.',
         },
       },
-      async () => {},
+      async ({ page }) => {
+        await mockApi(page, { user: EMPLOYER });
+        await page.goto('/employer/job-postings/1/applicants');
+
+        await expect(page.getByLabel('Kompetencija')).toBeVisible();
+      },
     );
 
-    test.skip(
+    test.fail(
       'TC-FR25-03 combines several filters with AND (AC3)',
       {
         annotation: {
-          type: 'skip',
+          type: 'defect',
           description:
-            'The applicants list has no filter by score or competence.',
+            'The applicants list has no filter by score or competence, so they cannot be combined.',
         },
       },
-      async () => {},
+      async ({ page }) => {
+        await mockApi(page, { user: EMPLOYER });
+        await page.goto('/employer/job-postings/1/applicants');
+
+        await expect(page.getByLabel('Minimalus įvertinimas')).toBeVisible();
+        await expect(page.getByLabel('Kompetencija')).toBeVisible();
+      },
     );
 
     test('TC-FR25-04 shows an error and keeps the list when filtering fails (AC4)', async ({
