@@ -133,9 +133,7 @@ class LoginSerializer(serializers.Serializer):
 
 
 class CompanySerializer(serializers.ModelSerializer):
-	registration_code = serializers.CharField(
-		max_length=9, allow_blank=False, required=False
-	)
+	registration_code = serializers.CharField(max_length=9, allow_blank=False, required=False)
 
 	class Meta:
 		model = Company
@@ -247,16 +245,12 @@ class JobPostingSerializer(serializers.ModelSerializer):
 		skills = attrs.get('skills', [])
 
 		if len(skills) > 20:
-			raise serializers.ValidationError(
-				{'skills': 'Galima nurodyti daugiausiai 20 įgūdžių.'}
-			)
+			raise serializers.ValidationError({'skills': 'Galima nurodyti daugiausiai 20 įgūdžių.'})
 
 		names_lower = [s['name'].lower() for s in skills]
 
 		if len(names_lower) != len(set(names_lower)):
-			raise serializers.ValidationError(
-				{'skills': 'Įgūdžiai skelbime turi būti unikalūs.'}
-			)
+			raise serializers.ValidationError({'skills': 'Įgūdžiai skelbime turi būti unikalūs.'})
 
 		salary_min = attrs.get('salary_min')
 		salary_max = attrs.get('salary_max')
@@ -308,9 +302,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
 		try:
 			embeddings = generate_embeddings([r['embed_text'] for r in prepared])
 		except EmbeddingError as exc:
-			raise serializers.ValidationError(
-				{'skills': f'Nepavyko sugeneruoti embeddingų: {exc}'}
-			)
+			raise serializers.ValidationError({'skills': f'Nepavyko sugeneruoti embeddingų: {exc}'})
 
 		with transaction.atomic():
 			posting = JobPosting.objects.create(**validated_data)
@@ -350,7 +342,9 @@ class JobPostingSerializer(serializers.ModelSerializer):
 				new_embedding_map = {}
 
 			embeddings = [
-				existing_cache[r['embed_text']] if r['embed_text'] in existing_cache else new_embedding_map.get(r['embed_text'])
+				existing_cache[r['embed_text']]
+				if r['embed_text'] in existing_cache
+				else new_embedding_map.get(r['embed_text'])
 				for r in prepared
 			]
 
@@ -372,9 +366,7 @@ class JobPostingSerializer(serializers.ModelSerializer):
 
 class ApplicationSerializer(serializers.ModelSerializer):
 	job_posting_title = serializers.CharField(source='job_posting.title', read_only=True)
-	company_name = serializers.CharField(
-		source='job_posting.company.name', read_only=True
-	)
+	company_name = serializers.CharField(source='job_posting.company.name', read_only=True)
 
 	class Meta:
 		model = Application
@@ -472,12 +464,8 @@ class ApplicantBriefSerializer(serializers.ModelSerializer):
 
 class EmployerApplicantListSerializer(serializers.ModelSerializer):
 	applicant_id = serializers.UUIDField(source='applicant.id', read_only=True)
-	applicant_first_name = serializers.CharField(
-		source='applicant.first_name', read_only=True
-	)
-	applicant_last_name = serializers.CharField(
-		source='applicant.last_name', read_only=True
-	)
+	applicant_first_name = serializers.CharField(source='applicant.first_name', read_only=True)
+	applicant_last_name = serializers.CharField(source='applicant.last_name', read_only=True)
 	applicant_email = serializers.EmailField(source='applicant.email', read_only=True)
 
 	class Meta:
@@ -507,12 +495,8 @@ class EmployerApplicationDetailSerializer(serializers.ModelSerializer):
 	applicant = ApplicantBriefSerializer(read_only=True)
 	cv = CVDetailSerializer(read_only=True)
 	job_posting_id = serializers.UUIDField(source='job_posting.id', read_only=True)
-	job_posting_title = serializers.CharField(
-		source='job_posting.title', read_only=True
-	)
-	company_name = serializers.CharField(
-		source='job_posting.company.name', read_only=True
-	)
+	job_posting_title = serializers.CharField(source='job_posting.title', read_only=True)
+	company_name = serializers.CharField(source='job_posting.company.name', read_only=True)
 
 	class Meta:
 		model = Application
@@ -607,9 +591,7 @@ class CandidateCompanySerializer(serializers.ModelSerializer):
 class CandidateJobPostingDetailSerializer(serializers.ModelSerializer):
 	company = CandidateCompanySerializer(read_only=True)
 	industry_name = serializers.CharField(source='industry.name', read_only=True)
-	skills = JobPostingSkillReadSerializer(
-		source='jobpostingskill_set', many=True, read_only=True
-	)
+	skills = JobPostingSkillReadSerializer(source='jobpostingskill_set', many=True, read_only=True)
 	match_score = serializers.IntegerField(read_only=True, default=0)
 	has_applied = serializers.BooleanField(read_only=True, default=False)
 	application_id = serializers.UUIDField(read_only=True, allow_null=True)

@@ -1,5 +1,6 @@
-import stripe
 from datetime import timedelta
+
+import stripe
 from django.conf import settings as django_settings
 from django.contrib.auth import login, logout
 from django.db import transaction

@@ -73,7 +73,9 @@ def compute_match_score(job_posting_skills, cv_skills) -> int:
 		best_idx = int(np.argmax(rescaled[i]))
 		best_sim = float(rescaled[i, best_idx])
 
-		if best_sim > 0.0 and getattr(jp_skill, 'type', None) == getattr(cv[best_idx], 'type', None):
+		if best_sim > 0.0 and (
+			getattr(jp_skill, 'type', None) == getattr(cv[best_idx], 'type', None)
+		):
 			best_sim = min(1.0, best_sim * TYPE_MATCH_BONUS)
 
 		weight = REQUIRED_WEIGHT if jp_skill.is_required else OPTIONAL_WEIGHT
@@ -111,7 +113,7 @@ def recompute_scores_for_posting(posting) -> None:
 	"""Refresh MatchScore rows and Application.match_score for every CV tied
 	to this posting. Called when posting skills change so previously shown /
 	applied scores stay in sync with the new requirements."""
-	from .models import Application, CV, JobPostingSkill, MatchScore
+	from .models import CV, Application, JobPostingSkill, MatchScore
 
 	jp_skills = list(JobPostingSkill.objects.filter(job_posting=posting))
 
