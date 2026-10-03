@@ -215,3 +215,5 @@ dist/
 test-results/
 playwright-report/
 blob-report/
+
+*.xlsx
