@@ -37,8 +37,8 @@ const config: PlaywrightTestConfig = {
        Full page, so the result is in the picture even when it's outside the viewport. */
     screenshot: { mode: 'on', fullPage: true },
 
-    /* Only on CI systems run the tests headless */
-    headless: !!process.env.CI,
+    /* Run headless by default; pass --headed to watch the browser */
+    headless: true,
   },
 
   /* Configure projects for major browsers */

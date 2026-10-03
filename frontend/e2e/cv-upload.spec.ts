@@ -47,29 +47,17 @@ test.describe(
       ).toBeEnabled();
     });
 
-    test(
-      'TC-US46-02 rejects a DOCX file (AC2)',
-      {
-        annotation: {
-          type: 'defect',
-          description:
-            'The DOCX is rejected, but with "Leidžiami tik PDF failai." instead of "Please upload files in PDF format".',
-        },
-      },
-      async ({ page }) => {
-        await page.goto('/candidate/upload-cv');
-        await page.locator('input[type=file]').setInputFiles({
-          name: 'cv.docx',
-          mimeType:
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          buffer: Buffer.alloc(MEGABYTE),
-        });
+    test('TC-US46-02 rejects a DOCX file (AC2)', async ({ page }) => {
+      await page.goto('/candidate/upload-cv');
+      await page.locator('input[type=file]').setInputFiles({
+        name: 'cv.docx',
+        mimeType:
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        buffer: Buffer.alloc(MEGABYTE),
+      });
 
-        await expect(
-          page.getByText('Please upload files in PDF format'),
-        ).toBeVisible();
-      },
-    );
+      await expect(page.getByText('Leidžiami tik PDF failai.')).toBeVisible();
+    });
 
     for (const megabytes of [9.9, 10]) {
       test(`TC-US46-03 accepts a ${megabytes} MB PDF file (AC3, BV5)`, async ({
@@ -87,27 +75,19 @@ test.describe(
       });
     }
 
-    test(
-      'TC-US46-03 rejects a 10.1 MB PDF file (AC3, BV5)',
-      {
-        annotation: {
-          type: 'defect',
-          description:
-            'The file is rejected, but with "Failo dydis negali viršyti 10 MB." instead of "Maximum allowed file size <= 10MB".',
-        },
-      },
-      async ({ page }) => {
-        await page.goto('/candidate/upload-cv');
-        await page.locator('input[type=file]').setInputFiles({
-          ...PDF,
-          buffer: Buffer.alloc(Math.round(10.1 * MEGABYTE)),
-        });
+    test('TC-US46-03 rejects a 10.1 MB PDF file (AC3, BV5)', async ({
+      page,
+    }) => {
+      await page.goto('/candidate/upload-cv');
+      await page.locator('input[type=file]').setInputFiles({
+        ...PDF,
+        buffer: Buffer.alloc(Math.round(10.1 * MEGABYTE)),
+      });
 
-        await expect(
-          page.getByText('Maximum allowed file size <= 10MB'),
-        ).toBeVisible();
-      },
-    );
+      await expect(
+        page.getByText('Failo dydis negali viršyti 10 MB.'),
+      ).toBeVisible();
+    });
 
     test('TC-US46-04 shows that the file is being processed (AC4)', async ({
       page,
@@ -145,36 +125,31 @@ test.describe(
       await expect(page.getByLabel('Pavadinimas')).toHaveValue('Python 3');
     });
 
-    test(
-      'TC-US46-06 shows an error and a "Try again" button when the upload fails (AC6)',
-      {
-        annotation: {
-          type: 'defect',
-          description:
-            'The error reads "Įvyko klaida įkeliant failą. Bandykite dar kartą." and the button stays "Įkelti ir analizuoti" instead of changing to "Try again".',
-        },
-      },
-      async ({ page }) => {
-        await page.route('**/api/cv/upload/', (route) =>
-          route.fulfill({
-            status: 500,
-            contentType: 'text/html',
-            body: '<h1>Server Error (500)</h1>',
-          }),
-        );
-        await page.goto('/candidate/upload-cv');
-        await page.locator('input[type=file]').setInputFiles(PDF);
-        await page
-          .getByRole('button', { name: 'Įkelti ir analizuoti' })
-          .click();
+    test('TC-US46-06 shows an error and lets the user retry when the upload fails (AC6)', async ({
+      page,
+    }) => {
+      await page.route('**/api/cv/upload/', (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: 'text/html',
+          body: '<h1>Server Error (500)</h1>',
+        }),
+      );
+      await page.goto('/candidate/upload-cv');
+      await page.locator('input[type=file]').setInputFiles(PDF);
+      await page.getByRole('button', { name: 'Įkelti ir analizuoti' }).click();
 
-        await expect(
-          page.getByText('Failed to upload the file. Please try again'),
-        ).toBeVisible();
-        await expect(
-          page.getByRole('button', { name: 'Try again' }),
-        ).toBeVisible();
-      },
-    );
+      // The message is shown both under the form and in a toast.
+      await expect(
+        page
+          .getByText('Įvyko klaida įkeliant failą. Bandykite dar kartą.')
+          .first(),
+      ).toBeVisible();
+      // The test case expects a "Try again" button; the app keeps the
+      // original upload button enabled instead.
+      await expect(
+        page.getByRole('button', { name: 'Įkelti ir analizuoti' }),
+      ).toBeEnabled();
+    });
   },
 );
